@@ -127,7 +127,7 @@ class LocalUpdate(object):
         accuracy = correct/total
         return accuracy, loss
     
-    def fairness_eval_dataset(self, set="train", target_label="income", s_attr="sex_1"):
+    def fairness_eval_spd(self, set="train", target_label="income", s_attr="sex_1"):
         privileged_groups = [{s_attr: 1}]
         unprivileged_groups = [{s_attr: 0}]
 
@@ -141,11 +141,13 @@ class LocalUpdate(object):
         metric_orig_train = BinaryLabelDatasetMetric(dataset_bld, 
                                 unprivileged_groups=unprivileged_groups,
                                 privileged_groups=privileged_groups)
-        print("Difference in mean outcomes between unprivileged and privileged groups = %f" % metric_orig_train.mean_difference())
-
+        
+        print("Statistical parity difference= %f" % metric_orig_train.mean_difference())
+        # print("Difference in mean outcomes between unprivileged and privileged groups = %f" % metric_orig_train.mean_difference())
         print("pass")
     
-    def fairness_eval_predicction(self, model):
+
+    def fairness_eval_eod(self, model):
 
 
         print("pass")
@@ -206,6 +208,7 @@ def get_prediction(args, model, test_dataset):
 
     correct = torch.sum(torch.eq(pred_labels, labels)).item()
     print("predicted 1s / sample size: ", torch.sum(pred_labels), " / ", len(pred_labels))
+    accuracy = correct/len(pred_labels)
 
-    return pred_labels
+    return pred_labels, accuracy
     
