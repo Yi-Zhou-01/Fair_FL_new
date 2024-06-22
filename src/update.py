@@ -6,10 +6,12 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
+
+from sklearn.model_selection import train_test_split
+
 
 class DatasetSplit(Dataset):
     """An abstract Dataset class wrapped around Pytorch Dataset class.
@@ -25,6 +27,34 @@ class DatasetSplit(Dataset):
     def __getitem__(self, item):
         image, label = self.dataset[self.idxs[item]]
         return torch.tensor(image), torch.tensor(label)
+
+
+
+class LocalDataset(object):
+    def __init__(self, dataset, local_idxs, test_ratio=0.2):
+        
+        self.local_idxs = local_idxs
+        self.local_dataset =  dataset.df[dataset.df.index.isin(local_idxs)]
+        self.target_label = dataset.target
+
+        self.test_ratio = test_ratio
+        self.train_set, self.test_set = self.train_test_split()
+        
+
+    # Return df
+    def train_test_split(self):
+        
+        X = self.local_dataset.drop(self.target_label, axis=1)
+        y = self.local_dataset[self.target_label]
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_ratio, stratify=y)
+
+        X_train[self.target_label] = y_train
+        X_test[self.target_label] = y_test
+
+        return X_train, X_test
+
+
 
 
 class LocalUpdate(object):
@@ -49,6 +79,10 @@ class LocalUpdate(object):
         idxs_train = idxs[:int(0.8*len(idxs))]
         idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
         idxs_test = idxs[int(0.9*len(idxs)):]
+
+        # print("++++++++++ Local dataset statistics +++++++++++++++++++")
+        # target_ls = dataset.y
+        # print("Train: ", )
 
         trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
                                  batch_size=self.args.local_bs, shuffle=True)
@@ -85,8 +119,9 @@ class LocalUpdate(object):
                 optimizer.step()
 
                 if self.args.verbose and (batch_idx % 10 == 0):
-                    if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
-                        print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    if batch_idx % 50 == 0 and (iter<10 or iter%10 ==0):
+                    # if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
+                        print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]  \tLoss: {:.6f}'.format(
                             global_round, iter, batch_idx * len(images),
                             len(self.trainloader.dataset),
                             100. * batch_idx / len(self.trainloader), loss.item()))
@@ -112,7 +147,16 @@ class LocalUpdate(object):
             # batch_loss = self.criterion(outputs, labels)
             # batch_loss = self.criterion(outputs, labels.long())
             outputs = model(images).squeeze()
-            batch_loss = self.criterion(outputs, labels)
+
+            try:
+                batch_loss = self.criterion(outputs, labels)
+            except:
+                print("DEBUG ====== ")
+                print(outputs, outputs.size())
+                print(labels,  labels.size())
+                # print()
+                print(len(outputs))
+                print(len(labels))
             loss += batch_loss.item()
 
             # Prediction
@@ -207,7 +251,7 @@ def get_prediction(args, model, test_dataset):
     # print(pred_labels)
 
     correct = torch.sum(torch.eq(pred_labels, labels)).item()
-    print("predicted 1s / sample size: ", torch.sum(pred_labels), " / ", len(pred_labels))
+    print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
     accuracy = correct/len(pred_labels)
 
     return pred_labels, accuracy

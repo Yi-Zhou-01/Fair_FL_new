@@ -63,7 +63,7 @@ def args_parser():
     parser.add_argument('--seed', type=int, default=1, help='random seed')
 
     # Add partition file path 
-    default_path = os.getcwd()+ "/data/adult/partition/user_groups_10clients_0alpha_diri_income_adult_all_33col_70train_0.npy"
+    default_path = os.getcwd()+ "/data/adult/partition/1/user_groups_10clients_0.5alpha_diri_income_adult_all_33col_70train_0.npy"
     parser.add_argument('--partition', type=str, default=default_path, help='partition file path')
 
     # Choose which fl algorithm to perform
@@ -73,7 +73,6 @@ def args_parser():
     
     args = parser.parse_args()
     return args
-
 
 # def args_parser():
 #     parser = argparse.ArgumentParser()

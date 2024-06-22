@@ -151,6 +151,8 @@ def get_args():
     # parser.add_argument('--init_seed', type=int, default=0, help="Random seed")
     parser.add_argument('--data_path', type=str, required=False, default="./data/adult/adult_all_33col_70train_0.csv", help="Data directory")
     parser.add_argument('--save_to_dir', type=str, required=False, default="/data/adult/partition/", help="Output directory")
+    parser.add_argument('--partition_idx', type=str, required=False, default="0", help="Output directory")
+    
     parser.add_argument('--alpha', type=float, default=0.5, help='The parameter for the dirichlet distribution for data partitioning')
     # parser.add_argument('--save_to', type=str, default='', help='The parameter for the dirichlet distribution for data partitioning')
     parser.add_argument('--target_attr', type=str, default='education-num', help='The parameter for the dirichlet distribution for data partitioning')
@@ -178,8 +180,10 @@ if __name__ == '__main__':
     print("client_idcs type: ", type(client_idcs))
 
     data_name = csv_file_train.split("/")[-1].split('.')[0]
-    file_name = "user_groups_%dclients_%falpha_%s_%s_%s.npy" %(args.n_clients, args.alpha, args.partition, args.target_attr, data_name)
-    save_to_file = os.getcwd() + args.save_to_dir + file_name
+    file_name = "user_groups_%dclients_%.1falpha_%s_%s_%s.npy" %(args.n_clients, args.alpha, args.partition, args.target_attr, data_name)
+    target_dir = os.getcwd() + args.save_to_dir + args.partition_idx 
+    os.makedirs(target_dir, exist_ok=True)
+    save_to_file = target_dir + "/"  + file_name
     # json.dump(client_idcs, open(save_to_file,'w'))
 
     np.save(save_to_file,client_idcs)

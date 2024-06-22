@@ -53,6 +53,16 @@ if __name__ == '__main__':
     # user groups: different client datasets
     train_dataset, test_dataset, user_groups = dataset.get_dataset(args)
 
+
+    # Split all local dataset
+    local_set_ls = []
+    for i in range(args.num_users):
+        local_idxs = user_groups[i]
+        local_dataset = update.LocalDataset(train_dataset, local_idxs, test_ratio=0.2)
+        local_set_ls.append(local_dataset)
+
+
+
     # BUILD MODEL
     if args.model == 'cnn':
         # Convolutional neural netork
@@ -161,36 +171,58 @@ if __name__ == '__main__':
         local_eod_ls_debiased = []
 
 
-        for idx in idxs_users:
+        for idx in range(args.num_users):
             idxs = user_groups[idx]
             idxs_test = idxs[int(0.9*len(idxs)):]        # <------------ Hard code index 
             idxs_train =  idxs[:int(0.8*len(idxs))]      # <------------ Hard code index 
             
-            test_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_test)]
+            # test_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_test)]
+
+            # train_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_train)]
+            
+            test_set_df = local_set_ls[idx].test_set
+            train_set_df = local_set_ls[idx].train_set
+
+            print(" ^^^^^^^^^^^^^^^^^^^ ")
+            print("Test Set Statistics: ", str(sum(test_set_df["income"])), " / ", str(len(test_set_df)))
+            print("Train Set Statistics: ", str(sum(train_set_df["income"])), " / ", str(len(train_set_df)))
+
+            # print("Test Set Statistics: ", str(sum(local_set_ls[idx].test_set["income"])), " / ", str(len(local_set_ls[idx].test_set)))
+            # print("Train Set Statistics: ", str(sum(local_set_ls[idx].train_set["income"])), " / ", str(len(local_set_ls[idx].train_set)))
+         
+
             local_test_dataset =  dataset.AdultDataset(csv_file="", df=test_set_df)
             local_test_prediction, local_acc = update.get_prediction(args, global_model, local_test_dataset)
             local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
 
             privileged_groups = [{train_dataset.s_attr: 1}]
             unprivileged_groups = [{train_dataset.s_attr: 0}]
+            
+            bm = BinaryLabelDatasetMetric(local_test_dataset.bld)
+
+            print("P - N: ", bm.num_positives(), bm.num_negatives())
 
             cm_pred_test = ClassificationMetric(local_test_dataset.bld, local_test_bld_prediction_dataset,
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
             abs_odds = cm_pred_test.average_abs_odds_difference()
+            eop_diff = cm_pred_test.equal_opportunity_difference()
+            eod_diff = cm_pred_test.equalized_odds_difference()
+
             fp_diff, tp_diff = cm_pred_test.difference(cm_pred_test.false_positive_rate), cm_pred_test.difference(cm_pred_test.true_positive_rate)
             
             local_acc = cm_pred_test.accuracy()   #   --------  Or use this accuracy
             
             # More statistics could be added
             local_acc_ls.append(local_acc)
-            local_eod_ls.append(abs_odds)
+            local_eod_ls.append((eop_diff, eod_diff) )
 
 
+            
             # Apply post-processing locally at each client:
             if args.fl == "new":
                 # Post-processing with local dataset
-                train_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_train)]
+                # train_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_train)]
                 local_train_dataset =  dataset.AdultDataset(csv_file="", df=train_set_df)
                 local_train_prediction, local_train_acc = update.get_prediction(args, global_model, local_train_dataset)
                 train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
@@ -212,11 +244,15 @@ if __name__ == '__main__':
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
                 abs_odds_debiased = cm_pred_test_debiased.average_abs_odds_difference()
+                eop_diff = cm_pred_test_debiased.equal_opportunity_difference()
+                eod_diff = cm_pred_test_debiased.equalized_odds_difference()
+
                 fp_diff_debiased, tp_diff_debiased = cm_pred_test_debiased.difference(cm_pred_test_debiased.false_positive_rate), cm_pred_test_debiased.difference(cm_pred_test_debiased.true_positive_rate)
                 local_test_acc_debiased = cm_pred_test_debiased.accuracy()
 
                 local_acc_ls_debiased.append(local_test_acc_debiased)
-                local_eod_ls_debiased.append(abs_odds_debiased)
+                local_eod_ls_debiased.append((eop_diff, eod_diff))
+            
 
 
         print("Before post-processing ...")
