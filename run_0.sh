@@ -32,3 +32,7 @@ python src/federated_main.py --model=mlp --dataset=adult --iid=0 --epochs=2 --nu
 # FL: with saved partition file; with post-processing and evaluation
 
 python src/federated_main.py --model=mlp --dataset=adult --epochs=2 --num_users 10 --frac 0.1 --local_ep 1 --fl "new" --post_proc_cost "fpr"
+
+
+
+python src/plot.py

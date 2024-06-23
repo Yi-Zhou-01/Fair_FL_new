@@ -147,6 +147,7 @@ class LocalUpdate(object):
             # batch_loss = self.criterion(outputs, labels)
             # batch_loss = self.criterion(outputs, labels.long())
             outputs = model(images).squeeze()
+            outputs = outputs.reshape(-1)
 
             try:
                 batch_loss = self.criterion(outputs, labels)

@@ -10,6 +10,7 @@ import pickle
 import numpy as np
 from tqdm import tqdm
 import os
+import pandas as pd
 
 import torch
 from tensorboardX import SummaryWriter
@@ -24,6 +25,7 @@ from models import MLP, MLPAdult, CNNMnist, CNNFashion_Mnist, CNNCifar
 from utils import average_weights, exp_details
 import os
 import update
+import plot
 
 
 from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
@@ -215,7 +217,8 @@ if __name__ == '__main__':
             
             # More statistics could be added
             local_acc_ls.append(local_acc)
-            local_eod_ls.append((eop_diff, eod_diff) )
+            # local_eod_ls.append((eop_diff, eod_diff) )
+            local_eod_ls.append(eod_diff)
 
 
             
@@ -251,7 +254,8 @@ if __name__ == '__main__':
                 local_test_acc_debiased = cm_pred_test_debiased.accuracy()
 
                 local_acc_ls_debiased.append(local_test_acc_debiased)
-                local_eod_ls_debiased.append((eop_diff, eod_diff))
+                # local_eod_ls_debiased.append((eop_diff, eod_diff))
+                local_eod_ls_debiased.append(eod_diff)
             
 
 
@@ -261,9 +265,28 @@ if __name__ == '__main__':
         print("After post-processing ...")
         print(local_acc_ls_debiased)
         print(local_eod_ls_debiased)
+    
 
+    statistics_dir = os.getcwd() + '/save/statistics/{}_{}_{}_ep{}/{}_frac{}_client{}_{}_part{}'.\
+        format(args.fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
+               args.post_proc_cost, args.local_bs, " ")    # <------------- iid tobeadded
         # Save to files ...
         # TBA
+    os.makedirs(statistics_dir, exist_ok=True)
+
+    df = pd.DataFrame()
+    df["acc_before"] = local_acc_ls
+    df["acc_after"] = local_acc_ls_debiased
+    df["eod_before"] = local_eod_ls
+    df["eod_after"] = local_eod_ls_debiased
+    df.to_csv(statistics_dir + "/acc_eod.csv")
+
+    plot_file = statistics_dir + "/acc_eod_plot.png"
+    plot.plot_acc_eod(local_acc_ls, local_acc_ls_debiased,local_eod_ls, local_eod_ls_debiased, save_to=plot_file)
+
+
+
+
 
 
     # # Apply post-processing locally at each client:
