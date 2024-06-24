@@ -125,12 +125,20 @@ if __name__ == '__main__':
 
             # For each selected user do local_ep round of training
             for idx in idxs_users:
-                local_model = LocalUpdate(args=args, dataset=train_dataset,
+                local_dataset = local_set_ls[idx]
+                split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+                local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
                                         idxs=user_groups[idx], logger=logger)
+
+                # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
+                #                         idxs=user_groups[idx], logger=logger)
+
+                # local_model = LocalUpdate(args=args, dataset=train_dataset,
+                #                         idxs=user_groups[idx], logger=logger)
                 
                 # print fairness eval
-                if epoch == 0:
-                    local_model.fairness_eval_spd()
+                # if epoch == 0:
+                #     local_model.fairness_eval_spd()
 
                 w, loss = local_model.update_weights(
                     model=copy.deepcopy(global_model), global_round=epoch)
@@ -151,8 +159,14 @@ if __name__ == '__main__':
             list_acc, list_loss = [], []
             global_model.eval()
             for c in range(args.num_users):
-                local_model = LocalUpdate(args=args, dataset=train_dataset,
+                local_dataset = local_set_ls[c]
+                split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+                local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
                                         idxs=user_groups[idx], logger=logger)
+
+                # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
+                #                         idxs=user_groups[idx], logger=logger)
+                
                 acc, loss = local_model.inference(model=global_model)
                 list_acc.append(acc)
                 list_loss.append(loss)
@@ -175,8 +189,8 @@ if __name__ == '__main__':
 
         for idx in range(args.num_users):
             idxs = user_groups[idx]
-            idxs_test = idxs[int(0.9*len(idxs)):]        # <------------ Hard code index 
-            idxs_train =  idxs[:int(0.8*len(idxs))]      # <------------ Hard code index 
+            # idxs_test = idxs[int(0.9*len(idxs)):]        # <------------ Hard code index 
+            # idxs_train =  idxs[:int(0.8*len(idxs))]      # <------------ Hard code index 
             
             # test_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_test)]
 
@@ -267,7 +281,7 @@ if __name__ == '__main__':
         print(local_eod_ls_debiased)
     
 
-    statistics_dir = os.getcwd() + '/save/statistics/{}_{}_{}_ep{}/{}_frac{}_client{}_{}_part{}'.\
+    statistics_dir = os.getcwd() + '/save/statistics/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}'.\
         format(args.fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
                args.post_proc_cost, args.local_bs, " ")    # <------------- iid tobeadded
         # Save to files ...

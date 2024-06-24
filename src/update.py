@@ -29,6 +29,22 @@ class DatasetSplit(Dataset):
         return torch.tensor(image), torch.tensor(label)
 
 
+class AdultDatasetWrapDf(Dataset):
+    """An abstract Dataset class wrapped around Pytorch Dataset class.
+    """
+
+    def __init__(self, dataset_df):
+        self.dataset_df = dataset_df.reset_index(drop=True)
+
+        # print(self.dataset_df[:5])
+
+    def __len__(self):
+        return len(self.dataset_df)
+
+    def __getitem__(self, idx):
+        image, label = self.dataset_df.drop('income', axis=1).iloc[idx], self.dataset_df['income'].iloc[idx]
+        return torch.tensor(image).to(torch.float32), torch.tensor(label).to(torch.float32)
+
 
 class LocalDataset(object):
     def __init__(self, dataset, local_idxs, test_ratio=0.2):
@@ -38,59 +54,109 @@ class LocalDataset(object):
         self.target_label = dataset.target
 
         self.test_ratio = test_ratio
-        self.train_set, self.test_set = self.train_test_split()
+        self.train_set, self.test_set, self.val_set, self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  = self.train_test_split()
+        # self.train_set, self.test_set, self.val_set = self.train_test_split()
         
 
     # Return df
     def train_test_split(self):
+
+        # print("Local dataset")
+        # print(self.local_dataset[:5].index)
+        # print(self.local_dataset[-5:].index)
+
         
         X = self.local_dataset.drop(self.target_label, axis=1)
         y = self.local_dataset[self.target_label]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_ratio, stratify=y)
 
+        X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, stratify=y_test)
+
         X_train[self.target_label] = y_train
         X_test[self.target_label] = y_test
+        X_val[self.target_label] = y_val
 
-        return X_train, X_test
+        # print("Local Train")
+        # print(X_train[:5].index)
+
+        # print("Local Test")
+        # print(X_test[:5].index)
+
+        return X_train, X_test, X_val, list(X_train.index), list(X_test.index), list(X_val.index)
 
 
 
 
 class LocalUpdate(object):
-    def __init__(self, args, dataset, idxs, logger):
+    def __init__(self, args, split_idxs, dataset, idxs, logger,local_dataset=None):
         self.args = args
         self.logger = logger
-        self.trainloader, self.validloader, self.testloader, self.train_idx, self.valid_idx, self.test_idx = self.train_val_test(dataset, list(idxs))
+        self.local_dataset = local_dataset
+
+        # self.trainloader, self.validloader, self.testloader = self.train_val_test(dataset, list(idxs))
+        self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs)
         self.device = 'cuda' if args.gpu else 'cpu'
         # Default criterion set to NLL loss function
         # self.criterion = nn.NLLLoss().to(self.device)
         self.criterion = torch.nn.BCEWithLogitsLoss().to(self.device)
         self.dataset = dataset
+    
+    def split_w_idxs(self, dataset, idxs):
+        train_idxs, test_idxs, val_idxs = idxs
+
+        trainloader = DataLoader(DatasetSplit(dataset, train_idxs),
+                                 batch_size=self.args.local_bs, shuffle=True)
+        validloader = DataLoader(DatasetSplit(dataset, val_idxs),
+                                 batch_size=int(len(val_idxs)/10), shuffle=False)
+        testloader = DataLoader(DatasetSplit(dataset, test_idxs),
+                                batch_size=int(len(test_idxs)/10), shuffle=False)
+        
+        return trainloader, validloader, testloader
+
 
         
 
-    def train_val_test(self, dataset, idxs):
+    def train_val_test(self, local_dataset, idxs):
         """
         Returns train, validation and test dataloaders for a given dataset
         and user indexes.
         """
-        # split indexes for train, validation, and test (80, 10, 10)
-        idxs_train = idxs[:int(0.8*len(idxs))]
-        idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
-        idxs_test = idxs[int(0.9*len(idxs)):]
 
-        # print("++++++++++ Local dataset statistics +++++++++++++++++++")
-        # target_ls = dataset.y
-        # print("Train: ", )
+        # trainloader = DataLoader(DatasetSplit(dataset, local_dataset.train_set_idxs),
+        #                          batch_size=self.args.local_bs, shuffle=True)
+        # validloader = DataLoader(DatasetSplit(dataset, local_dataset.val_set_idxs),
+        #                          batch_size=int(len(idxs_val)/10), shuffle=False)
+        # testloader = DataLoader(DatasetSplit(dataset, local_dataset.test_set_idxs),
+        #                         batch_size=int(len(idxs_test)/10), shuffle=False)
 
-        trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
+        # -----------------------------------------
+        trainloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.train_set),
                                  batch_size=self.args.local_bs, shuffle=True)
-        validloader = DataLoader(DatasetSplit(dataset, idxs_val),
-                                 batch_size=int(len(idxs_val)/10), shuffle=False)
-        testloader = DataLoader(DatasetSplit(dataset, idxs_test),
-                                batch_size=int(len(idxs_test)/10), shuffle=False)
-        return trainloader, validloader, testloader, idxs_train, idxs_val, idxs_test
+        testloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.test_set),
+                                 batch_size=int(len(self.local_dataset.test_set)/10), shuffle=True)
+        validloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.val_set),
+                                 batch_size=int(len(self.local_dataset.val_set)/10), shuffle=True)
+
+
+        # -----------------------------------------
+
+        # # split indexes for train, validation, and test (80, 10, 10)
+        # idxs_train = idxs[:int(0.8*len(idxs))]
+        # idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
+        # idxs_test = idxs[int(0.9*len(idxs)):]
+
+        # # print("++++++++++ Local dataset statistics +++++++++++++++++++")
+        # # target_ls = dataset.y
+        # # print("Train: ", )
+
+        # trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
+        #                          batch_size=self.args.local_bs, shuffle=True)
+        # validloader = DataLoader(DatasetSplit(dataset, idxs_val),
+        #                          batch_size=int(len(idxs_val)/10), shuffle=False)
+        # testloader = DataLoader(DatasetSplit(dataset, idxs_test),
+        #                         batch_size=int(len(idxs_test)/10), shuffle=False)
+        return trainloader, validloader, testloader
 
     def update_weights(self, model, global_round):
         # Set mode to train model
@@ -172,30 +238,30 @@ class LocalUpdate(object):
         accuracy = correct/total
         return accuracy, loss
     
-    def fairness_eval_spd(self, set="train", target_label="income", s_attr="sex_1"):
-        privileged_groups = [{s_attr: 1}]
-        unprivileged_groups = [{s_attr: 0}]
+    # def fairness_eval_spd(self, set="train", target_label="income", s_attr="sex_1"):
+    #     privileged_groups = [{s_attr: 1}]
+    #     unprivileged_groups = [{s_attr: 0}]
 
-        # statistical_parity_difference of local train data
-        if set == "train":
-            subset_df = self.dataset.df[self.dataset.df.index.isin(self.train_idx)]
-        elif set == "test":
-            subset_df = self.dataset.df[self.dataset.df.index.isin(self.test_idx)]
-        dataset_bld = BinaryLabelDataset(df=subset_df, label_names=[target_label], protected_attribute_names=[s_attr])
+    #     # statistical_parity_difference of local train data
+    #     if set == "train":
+    #         subset_df = self.dataset.df[self.dataset.df.index.isin(self.train_idx)]
+    #     elif set == "test":
+    #         subset_df = self.dataset.df[self.dataset.df.index.isin(self.test_idx)]
+    #     dataset_bld = BinaryLabelDataset(df=subset_df, label_names=[target_label], protected_attribute_names=[s_attr])
         
-        metric_orig_train = BinaryLabelDatasetMetric(dataset_bld, 
-                                unprivileged_groups=unprivileged_groups,
-                                privileged_groups=privileged_groups)
+    #     metric_orig_train = BinaryLabelDatasetMetric(dataset_bld, 
+    #                             unprivileged_groups=unprivileged_groups,
+    #                             privileged_groups=privileged_groups)
         
-        print("Statistical parity difference= %f" % metric_orig_train.mean_difference())
-        # print("Difference in mean outcomes between unprivileged and privileged groups = %f" % metric_orig_train.mean_difference())
-        print("pass")
+    #     print("Statistical parity difference= %f" % metric_orig_train.mean_difference())
+    #     # print("Difference in mean outcomes between unprivileged and privileged groups = %f" % metric_orig_train.mean_difference())
+    #     print("pass")
     
 
-    def fairness_eval_eod(self, model):
+    # def fairness_eval_eod(self, model):
 
 
-        print("pass")
+    #     print("pass")
 
 
 def test_inference(args, model, test_dataset):
