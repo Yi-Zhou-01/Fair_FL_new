@@ -53,8 +53,13 @@ class LocalDataset(object):
         self.local_dataset =  dataset.df[dataset.df.index.isin(local_idxs)]
         self.target_label = dataset.target
 
+
         self.test_ratio = test_ratio
         self.train_set, self.test_set, self.val_set, self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  = self.train_test_split()
+        
+        self.train_len = len(self.train_set_idxs)
+        self.test_len = len(self.test_set_idxs)
+        self.val_len = len(self.val_set_idxs)
         # self.train_set, self.test_set, self.val_set = self.train_test_split()
         
 

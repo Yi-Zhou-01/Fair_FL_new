@@ -52,6 +52,7 @@ def plot_acc_eod(acc_before, acc_after, eod_before, eod_after, save_to=None):
     plt.plot(x, eod_after,  color="red", linestyle='dashed', label='eod_after')
 
     plt.xlabel("Client ID")
+    plt.xticks(np.arange(min(x), max(x)+1, 1.0))
     plt.ylabel("")
     plt.title("Accuracy and EOD Across Clients - %s" % "Before and After Post-processing" )
     plt.legend()
@@ -61,6 +62,70 @@ def plot_acc_eod(acc_before, acc_after, eod_before, eod_after, save_to=None):
     else:
         plt.show()
 
+
+def plot_all(stat_dic, save_to=None):
+    
+    fig, ((ax1, ax2, ax3), (ax4, ax5, ax6) ) = plt.subplots(2, 3,figsize=(15, 10))
+
+    x = list(range(len(stat_dic['test_acc_before'])))
+    ax1.plot(x, stat_dic['test_acc_before'], color='blue',  label='acc_before')
+    ax1.plot(x, stat_dic['test_acc_after'],  color="red", label='acc_after')
+    ax1.plot(x, stat_dic['test_eod_before'], color='blue', linestyle='dashed', label='eod_before')
+    ax1.plot(x, stat_dic['test_eod_after'],  color="red", linestyle='dashed', label='eod_after')
+    
+
+    ax1.set_xlabel("Client ID")
+    ax1.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax1.set_title('Accuracy & EOD - Test')
+    ax1.legend(loc="upper right")
+
+
+    ax2.plot(x, stat_dic['test_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
+    ax2.plot(x, stat_dic['test_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
+    ax2.set_xlabel("Client ID")
+    ax2.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax2.set_title('FPR - Test')
+    ax2.legend()
+
+    ax3.plot(x, stat_dic['test_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
+    ax3.plot(x, stat_dic['test_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
+    ax3.set_xlabel("Client ID")
+    ax3.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax3.set_title('TPR - Test')
+    ax3.legend()
+
+    
+    ax4.plot(x, stat_dic['train_acc_before'], color='blue',  label='acc_before')
+    ax4.plot(x, stat_dic['train_acc_after'],  color="red", label='acc_after')
+    ax4.plot(x, stat_dic['train_eod_before'], color='blue', linestyle='dashed', label='eod_before')
+    ax4.plot(x, stat_dic['train_eod_after'],  color="red", linestyle='dashed', label='eod_after')
+    
+    ax4.set_xlabel("Client ID")
+    ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax4.set_title('Accuracy & EOD - Train')
+    ax4.legend(loc="upper right")
+    ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+
+
+    ax5.plot(x, stat_dic['train_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
+    ax5.plot(x, stat_dic['train_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
+    ax5.set_xlabel("Client ID")
+    ax5.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax5.set_title('FPR - Train')
+    ax5.legend()
+
+    ax6.plot(x, stat_dic['train_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
+    ax6.plot(x, stat_dic['train_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
+    ax6.set_xlabel("Client ID")
+    ax6.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax6.set_title('TPR - Train')
+    ax6.legend()
+
+
+    if save_to:
+        plt.savefig(save_to)
+    else:
+        plt.show()
 
 
 

@@ -30,6 +30,7 @@ import plot
 
 from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
 from aif360.algorithms.postprocessing.calibrated_eq_odds_postprocessing import CalibratedEqOddsPostprocessing
+from aif360.algorithms.postprocessing import EqOddsPostprocessing
 
 
 # from dataset import get_dataset
@@ -180,12 +181,25 @@ if __name__ == '__main__':
         
         # Evaluation locally after training
         print("********* Start Local Evaluation and Post-processing **********")
-        local_acc_ls = []
-        local_eod_ls = []
 
-        local_acc_ls_debiased = []
-        local_eod_ls_debiased = []
+        stat_keys = ['train_acc_before','train_acc_after', 'test_acc_before', 'test_acc_after',
+                    'train_eod_before', 'train_eod_after', 'test_eod_before', 'test_eod_after',
+                    'train_fpr_before', 'train_fpr_after', 'test_fpr_before', 'test_fpr_after',
+                    'train_tpr_before', 'train_tpr_after', 'test_tpr_before', 'test_tpr_after']
+        stat_dic = {k: [] for k in stat_keys}
 
+        # local_acc_ls = []
+        # local_eod_ls = []
+
+        # local_acc_ls_debiased = []
+        # local_eod_ls_debiased = []
+
+        # local_train_eod_ls = []
+        # local_train_eod_ls_debiased = []
+        # local_train_acc_ls = []
+        # local_train_acc_ls_debiased = []
+
+        # statistics_dic = dict.fromkeys(['train_acc_before','train_acc_after', 'test_acc_before'], [])
 
         for idx in range(args.num_users):
             idxs = user_groups[idx]
@@ -218,21 +232,29 @@ if __name__ == '__main__':
 
             print("P - N: ", bm.num_positives(), bm.num_negatives())
 
+            # Test set statistics BEFORE post-processing
             cm_pred_test = ClassificationMetric(local_test_dataset.bld, local_test_bld_prediction_dataset,
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
-            abs_odds = cm_pred_test.average_abs_odds_difference()
-            eop_diff = cm_pred_test.equal_opportunity_difference()
-            eod_diff = cm_pred_test.equalized_odds_difference()
+            
+            # abs_odds = cm_pred_test.average_abs_odds_difference()
+            # eop_diff = cm_pred_test.equal_opportunity_difference()
+            # eod_diff = cm_pred_test.equalized_odds_difference()
 
-            fp_diff, tp_diff = cm_pred_test.difference(cm_pred_test.false_positive_rate), cm_pred_test.difference(cm_pred_test.true_positive_rate)
+            # fp_diff, tp_diff = cm_pred_test.difference(cm_pred_test.false_positive_rate), cm_pred_test.difference(cm_pred_test.true_positive_rate)
+            # local_acc = cm_pred_test.accuracy()   #   --------  Or use this accuracy
             
-            local_acc = cm_pred_test.accuracy()   #   --------  Or use this accuracy
+            # # More statistics could be added
+            # local_acc_ls.append(local_acc)
+            # # local_eod_ls.append((eop_diff, eod_diff) )
+            # local_eod_ls.append(eod_diff)
+
+            stat_dic['test_acc_before'].append(cm_pred_test.accuracy())
+            stat_dic['test_eod_before'].append(cm_pred_test.equalized_odds_difference())
+            # stat_dic['test_eod_before'].append(cm_pred_test.average_abs_odds_difference())
             
-            # More statistics could be added
-            local_acc_ls.append(local_acc)
-            # local_eod_ls.append((eop_diff, eod_diff) )
-            local_eod_ls.append(eod_diff)
+            stat_dic['test_fpr_before'].append(abs(cm_pred_test.difference(cm_pred_test.false_positive_rate)))
+            stat_dic['test_tpr_before'].append(abs( cm_pred_test.difference(cm_pred_test.true_positive_rate)))
 
 
             
@@ -244,41 +266,104 @@ if __name__ == '__main__':
                 local_train_prediction, local_train_acc = update.get_prediction(args, global_model, local_train_dataset)
                 train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
                 
+                # Train set acc and eod before post-processing
+                cm_pred_train = ClassificationMetric(local_train_dataset.bld, train_bld_prediction_dataset,
+                unprivileged_groups=unprivileged_groups,
+                privileged_groups=privileged_groups)
+                # local_train_eod_ls.append(cm_pred_train.equalized_odds_difference())
+                # local_train_eod_ls.append(abs(cm_pred_train.difference(cm_pred_train.generalized_false_positive_rate)))
+                # local_train_acc_ls.append(cm_pred_train.accuracy())
+
+
+                stat_dic['train_acc_before'].append(cm_pred_train.accuracy())
+                stat_dic['train_eod_before'].append(cm_pred_train.equalized_odds_difference())
+                # stat_dic['train_eod_before'].append(cm_pred_train.average_abs_odds_difference())
+                stat_dic['train_fpr_before'].append(abs(cm_pred_train.difference(cm_pred_train.false_positive_rate)))
+                stat_dic['train_tpr_before'].append(abs( cm_pred_train.difference(cm_pred_train.true_positive_rate)))
+
+
+
                 cost_constraint = args.post_proc_cost # "fpr" # "fnr", "fpr", "weighted"
                 randseed = 12345679 
 
-                cpp = CalibratedEqOddsPostprocessing(privileged_groups = privileged_groups,
+                # Fit post-processing model
+                
+                # cpp = CalibratedEqOddsPostprocessing(privileged_groups = privileged_groups,
+                #                                 unprivileged_groups = unprivileged_groups,
+                #                                 cost_constraint=cost_constraint,
+                #                                 seed=randseed)
+                
+                cpp = EqOddsPostprocessing(privileged_groups = privileged_groups,
                                                 unprivileged_groups = unprivileged_groups,
-                                                cost_constraint=cost_constraint,
                                                 seed=randseed)
                 cpp = cpp.fit(local_train_dataset.bld, train_bld_prediction_dataset)
 
-                # Test set with original prediction
+                
+                # Prediction after post-processing
                 local_train_dataset_bld_prediction_debiased = cpp.predict(train_bld_prediction_dataset)
                 local_test_dataset_bld_prediction_debiased = cpp.predict(local_test_bld_prediction_dataset)
+
+                # Metrics after post-processing
+                cm_pred_train_debiased = ClassificationMetric(local_train_dataset.bld, local_train_dataset_bld_prediction_debiased,
+                            unprivileged_groups=unprivileged_groups,
+                            privileged_groups=privileged_groups)
+               
+
+                # local_train_eod_ls_debiased.append(cm_pred_train_debiased.equalized_odds_difference())
+                # local_train_eod_ls_debiased.append(abs(cm_pred_train_debiased.difference(cm_pred_train_debiased.generalized_false_positive_rate)))
+                # local_train_acc_ls_debiased.append(cm_pred_train_debiased.accuracy())
+
+                
+                stat_dic['train_acc_after'].append(cm_pred_train_debiased.accuracy())
+                stat_dic['train_eod_after'].append(cm_pred_train_debiased.equalized_odds_difference())
+                # stat_dic['train_eod_after'].append(cm_pred_train_debiased.average_abs_odds_difference())
+                stat_dic['train_fpr_after'].append(abs(cm_pred_train_debiased.difference(cm_pred_train_debiased.false_positive_rate)))
+                stat_dic['train_tpr_after'].append(abs( cm_pred_train_debiased.difference(cm_pred_train_debiased.true_positive_rate)))
+
+
 
                 cm_pred_test_debiased = ClassificationMetric(local_test_dataset.bld, local_test_dataset_bld_prediction_debiased,
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
-                abs_odds_debiased = cm_pred_test_debiased.average_abs_odds_difference()
-                eop_diff = cm_pred_test_debiased.equal_opportunity_difference()
-                eod_diff = cm_pred_test_debiased.equalized_odds_difference()
+                # abs_odds_debiased = cm_pred_test_debiased.average_abs_odds_difference()
+                # eop_diff = cm_pred_test_debiased.equal_opportunity_difference()
+                # eod_diff = cm_pred_test_debiased.equalized_odds_difference()
 
-                fp_diff_debiased, tp_diff_debiased = cm_pred_test_debiased.difference(cm_pred_test_debiased.false_positive_rate), cm_pred_test_debiased.difference(cm_pred_test_debiased.true_positive_rate)
-                local_test_acc_debiased = cm_pred_test_debiased.accuracy()
+                # fp_diff_debiased, tp_diff_debiased = cm_pred_test_debiased.difference(cm_pred_test_debiased.false_positive_rate), cm_pred_test_debiased.difference(cm_pred_test_debiased.true_positive_rate)
+                # local_test_acc_debiased = cm_pred_test_debiased.accuracy()
 
-                local_acc_ls_debiased.append(local_test_acc_debiased)
-                # local_eod_ls_debiased.append((eop_diff, eod_diff))
-                local_eod_ls_debiased.append(eod_diff)
+                # local_acc_ls_debiased.append(local_test_acc_debiased)
+                # # local_eod_ls_debiased.append((eop_diff, eod_diff))
+                # local_eod_ls_debiased.append(eod_diff)
+
+                stat_dic['test_acc_after'].append(cm_pred_test_debiased.accuracy())
+                stat_dic['test_eod_after'].append(cm_pred_test_debiased.equalized_odds_difference())
+                # stat_dic['test_eod_after'].append(cm_pred_test_debiased.average_abs_odds_difference())
+                stat_dic['test_fpr_after'].append(abs(cm_pred_test_debiased.difference(cm_pred_test_debiased.false_positive_rate)))
+                stat_dic['test_tpr_after'].append(abs( cm_pred_test_debiased.difference(cm_pred_test_debiased.true_positive_rate)))
+
             
 
 
-        print("Before post-processing ...")
-        print(local_acc_ls)
-        print(local_eod_ls)
-        print("After post-processing ...")
-        print(local_acc_ls_debiased)
-        print(local_eod_ls_debiased)
+        print("Test Acc ...")
+        print(stat_dic['test_acc_before'])
+        print(stat_dic['test_acc_after'])
+        print("Test EOD ...")
+        print(stat_dic['test_eod_before'])
+        print(stat_dic['test_eod_after'])
+        print("Test FPR ...")
+        print(stat_dic['test_fpr_before'])
+        print(stat_dic['test_fpr_after'])
+
+        print("Train Acc ...")
+        print(stat_dic['train_acc_before'])
+        print(stat_dic['train_acc_after'])
+        print("Train EOD ...")
+        print(stat_dic['train_eod_before'])
+        print(stat_dic['train_eod_after'])
+        print("Train FPR ...")
+        print(stat_dic['train_fpr_before'])
+        print(stat_dic['train_fpr_after'])
     
 
     statistics_dir = os.getcwd() + '/save/statistics/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}'.\
@@ -288,16 +373,23 @@ if __name__ == '__main__':
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
 
-    df = pd.DataFrame()
-    df["acc_before"] = local_acc_ls
-    df["acc_after"] = local_acc_ls_debiased
-    df["eod_before"] = local_eod_ls
-    df["eod_after"] = local_eod_ls_debiased
-    df.to_csv(statistics_dir + "/acc_eod.csv")
+    # df = pd.DataFrame()
+    # df["acc_before"] = local_acc_ls
+    # df["acc_after"] = local_acc_ls_debiased
+    # df["eod_before"] = local_eod_ls
+    # df["eod_after"] = local_eod_ls_debiased
+    # df.to_csv(statistics_dir + "/test_acc_eod.csv")
 
-    plot_file = statistics_dir + "/acc_eod_plot.png"
-    plot.plot_acc_eod(local_acc_ls, local_acc_ls_debiased,local_eod_ls, local_eod_ls_debiased, save_to=plot_file)
+    # plot_file = statistics_dir + "/test_acc_eod_plot.png"
+    # plot.plot_acc_eod(local_acc_ls, local_acc_ls_debiased,local_eod_ls, local_eod_ls_debiased, save_to=plot_file)
 
+    # plot_file_train = statistics_dir + "/train_acc_eod_plot.png"
+    # plot.plot_acc_eod(acc_before=local_train_acc_ls, acc_after=local_train_acc_ls_debiased,eod_before=local_train_eod_ls, eod_after=local_train_eod_ls_debiased, save_to=plot_file_train)
+
+
+    plot_file_all = statistics_dir + "/all_acc_eod_plot.png"
+    plot.plot_all(stat_dic,
+                save_to=plot_file_all)
 
 
 
