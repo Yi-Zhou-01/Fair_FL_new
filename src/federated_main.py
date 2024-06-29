@@ -366,9 +366,9 @@ if __name__ == '__main__':
         print(stat_dic['train_fpr_after'])
     
 
-    statistics_dir = os.getcwd() + '/save/statistics/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}'.\
-        format(args.fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
-               args.post_proc_cost, args.local_bs, " ")    # <------------- iid tobeadded
+    statistics_dir = os.getcwd() + '/save/statistics/{}/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}'.\
+        format(args.idx, args.fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
+               args.post_proc_cost, args.partition_idx)    # <------------- iid tobeadded
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)

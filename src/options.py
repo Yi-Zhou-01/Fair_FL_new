@@ -63,13 +63,15 @@ def args_parser():
     parser.add_argument('--seed', type=int, default=1, help='random seed')
 
     # Add partition file path 
-    default_path = os.getcwd()+ "/data/adult/partition/1/user_groups_10clients_0.5alpha_diri_income_adult_all_33col_70train_0.npy"
-    parser.add_argument('--partition', type=str, default=default_path, help='partition file path')
+    # default_path = os.getcwd()+ "/data/adult/partition/1/user_groups_10clients_0.5alpha_diri_income_adult_all_33col_70train_0.npy"
+    parser.add_argument('--partition_idx', type=int, default=1, help='partition file path')
 
     # Choose which fl algorithm to perform
     parser.add_argument('--fl', type=str, default='new', help='fl algorithm')
 
     parser.add_argument('--post_proc_cost', type=str, default='fpr', help='post-processing cost constraint.')
+
+    parser.add_argument('--idx', type=int, help='Experiment index.')
     
     args = parser.parse_args()
     return args

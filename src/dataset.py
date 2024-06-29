@@ -90,6 +90,14 @@ def get_bld_dataset_w_pred(test_dataset, prediction_test):
 #         csv_file_val =  os.getcwd()+'/data/adult/adult_dummy.csv'
 #         train_dataset = AdultDataset(csv_file_train)
 
+def get_partition(p_idx):
+    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/adult/partition/' + str(p_idx)
+    file_ls = os.listdir(path_root)
+    partition_file_ls = [file for file in file_ls if '.npy' in file]
+    partition_file = path_root + '/' + partition_file_ls[0]
+
+    return partition_file
+
 
 def get_dataset(args):
     """ Returns train and test datasets and a user group which is a dict where
@@ -113,7 +121,8 @@ def get_dataset(args):
 
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
-        user_groups =  np.load(args.partition, allow_pickle=True).item()
+        partition_file = get_partition(args.partition_idx)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
 
    
         # if args.iid:
