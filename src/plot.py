@@ -63,11 +63,17 @@ def plot_acc_eod(acc_before, acc_after, eod_before, eod_after, save_to=None):
         plt.show()
 
 
-def plot_all(stat_dic, save_to=None):
+def plot_all(stat_dic, title=None, save_to=None):
     
     fig, ((ax1, ax2, ax3), (ax4, ax5, ax6) ) = plt.subplots(2, 3,figsize=(15, 10))
 
     x = list(range(len(stat_dic['test_acc_before'])))
+
+    if title:
+        fig.suptitle(title, fontsize=16)
+
+    ax1.axhline(0.8, color='lightsteelblue', alpha=0.6)
+    ax1.axhline(0.1, color='orange', alpha=0.4)
     ax1.plot(x, stat_dic['test_acc_before'], color='blue',  label='acc_before')
     ax1.plot(x, stat_dic['test_acc_after'],  color="red", label='acc_after')
     ax1.plot(x, stat_dic['test_eod_before'], color='blue', linestyle='dashed', label='eod_before')
@@ -80,6 +86,7 @@ def plot_all(stat_dic, save_to=None):
     ax1.legend(loc="upper right")
 
 
+    ax2.axhline(0.1, color='orange', alpha=0.4)
     ax2.plot(x, stat_dic['test_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
     ax2.plot(x, stat_dic['test_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
     ax2.set_xlabel("Client ID")
@@ -87,6 +94,7 @@ def plot_all(stat_dic, save_to=None):
     ax2.set_title('FPR - Test')
     ax2.legend()
 
+    ax3.axhline(0.1, color='orange', alpha=0.4)
     ax3.plot(x, stat_dic['test_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
     ax3.plot(x, stat_dic['test_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
     ax3.set_xlabel("Client ID")
@@ -94,7 +102,8 @@ def plot_all(stat_dic, save_to=None):
     ax3.set_title('TPR - Test')
     ax3.legend()
 
-    
+    ax4.axhline(0.8, color='lightsteelblue', alpha=0.6)
+    ax4.axhline(0.1, color='orange', alpha=0.4)
     ax4.plot(x, stat_dic['train_acc_before'], color='blue',  label='acc_before')
     ax4.plot(x, stat_dic['train_acc_after'],  color="red", label='acc_after')
     ax4.plot(x, stat_dic['train_eod_before'], color='blue', linestyle='dashed', label='eod_before')
@@ -106,7 +115,7 @@ def plot_all(stat_dic, save_to=None):
     ax4.legend(loc="upper right")
     ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
 
-
+    ax5.axhline(0.1, color='orange', alpha=0.4)
     ax5.plot(x, stat_dic['train_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
     ax5.plot(x, stat_dic['train_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
     ax5.set_xlabel("Client ID")
@@ -114,6 +123,7 @@ def plot_all(stat_dic, save_to=None):
     ax5.set_title('FPR - Train')
     ax5.legend()
 
+    ax6.axhline(0.1, color='orange', alpha=0.4)
     ax6.plot(x, stat_dic['train_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
     ax6.plot(x, stat_dic['train_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
     ax6.set_xlabel("Client ID")

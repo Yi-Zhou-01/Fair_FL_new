@@ -387,8 +387,9 @@ if __name__ == '__main__':
     # plot.plot_acc_eod(acc_before=local_train_acc_ls, acc_after=local_train_acc_ls_debiased,eod_before=local_train_eod_ls, eod_after=local_train_eod_ls_debiased, save_to=plot_file_train)
 
 
+    fig_title = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
     plot_file_all = statistics_dir + "/all_acc_eod_plot.png"
-    plot.plot_all(stat_dic,
+    plot.plot_all(stat_dic, title=fig_title,
                 save_to=plot_file_all)
 
 
