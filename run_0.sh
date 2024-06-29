@@ -40,3 +40,4 @@ python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 
 python src/plot.py
 
 
+python src/partition.py --partition=diri --n_clients=10 --target_attr=income --partition_idx 6 --alpha 0.9

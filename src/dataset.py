@@ -113,7 +113,8 @@ def get_dataset(args):
         # csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_80train.csv'
         # csv_file_test =  os.getcwd()+'/data/adult/adult_all_33col_20test.csv'
 
-        csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_70train_0.csv'
+        csv_file_train = os.getcwd()+'/data/adult/adult_all_33col.csv'
+        # csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_70train_0.csv'
         csv_file_test =  os.getcwd()+'/data/adult/adult_all_33col_20test_0.csv'
         csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
 
