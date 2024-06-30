@@ -72,6 +72,8 @@ def args_parser():
     parser.add_argument('--post_proc_cost', type=str, default='fpr', help='post-processing cost constraint.')
 
     parser.add_argument('--idx', type=int, help='Experiment index.')
+
+    parser.add_argument('--beta', type=int, default=0.3, help='Beta parameter for Fairfed, "fairness budget".')
     
     args = parser.parse_args()
     return args

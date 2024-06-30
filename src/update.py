@@ -5,6 +5,8 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+import dataset
+import pandas as pd
 
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
@@ -327,4 +329,82 @@ def get_prediction(args, model, test_dataset):
     accuracy = correct/len(pred_labels)
 
     return pred_labels, accuracy
+
+
+def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
     
+    """ Returns the test accuracy and loss.
+    """
+
+    model.eval()
+    device = 'cuda' if gpu else 'cpu'
+    # criterion = nn.NLLLoss().to(device)
+
+    X_tensor = torch.tensor(test_dataset.X)
+    Y_tensor  = torch.tensor(test_dataset.y)
+    images, labels = X_tensor.to(device), Y_tensor.to(device)
+    outputs = model(images).squeeze()
+    pred_labels = [ int(pred >= 0.5) for pred in outputs]
+  
+    pred_labels = pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+    pred_labels = pred_labels.view(-1)
+    # print("Len of pred_labels set: ", len(pred_labels))
+    # print(pred_labels)
+
+    train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(test_dataset, pred_labels)
+                
+    privileged_groups = [{test_dataset.s_attr: 1}]
+    unprivileged_groups = [{test_dataset.s_attr: 0}]
+    cm_pred_train = ClassificationMetric(test_dataset.bld, train_bld_prediction_dataset,
+    unprivileged_groups=unprivileged_groups,
+    privileged_groups=privileged_groups)
+
+    accuracy = cm_pred_train.accuracy()
+    if metric == "eod":
+        local_fairness = cm_pred_train.equalized_odds_difference()
+
+    # correct = torch.sum(torch.eq(pred_labels, labels)).item()
+    print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
+    # accuracy = correct/len(pred_labels)
+
+    return pred_labels, accuracy, local_fairness
+
+
+def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", set="train"):
+    '''
+    Given local dataset split and predictions, return local fairness score
+    '''
+
+    rows = []
+    for i in range(len(local_dataset_ls)):
+        if set == "train":
+            local_idxs = local_dataset_ls[i].train_set_idxs
+        elif set == "test":
+            local_idxs = local_dataset_ls[i].test_set_idxs
+        
+        for idx in  local_idxs:
+            rows.append(dataset.iloc[idx])
+    
+    new_dataset = pd.DataFrame(rows)
+    original_bld_dataset = BinaryLabelDataset(df=new_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+    
+    all_prediction =  [pred for ls in prediction_ls for pred in ls]
+    prediction_dataset = new_dataset.df.copy(deep=True)
+    prediction_dataset[dataset.target] = all_prediction
+    prediction_bld_dataset = BinaryLabelDataset(df=prediction_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+
+
+    privileged_groups = [{dataset.s_attr: 1}]
+    unprivileged_groups = [{dataset.s_attr: 0}]
+    cm_pred = ClassificationMetric(original_bld_dataset, prediction_bld_dataset,
+    unprivileged_groups=unprivileged_groups,
+    privileged_groups=privileged_groups)
+
+    accuracy = cm_pred.accuracy()
+    if metric == "eod":
+        fairness = cm_pred.equalized_odds_difference()
+    
+    return accuracy, fairness
+  
+
+# def get_weighted_metric_gap(sample_size_ls, metric_gap):
