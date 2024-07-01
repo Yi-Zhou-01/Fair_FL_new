@@ -383,13 +383,13 @@ def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", 
             local_idxs = local_dataset_ls[i].test_set_idxs
         
         for idx in  local_idxs:
-            rows.append(dataset.iloc[idx])
+            rows.append(dataset.df.iloc[idx])
     
     new_dataset = pd.DataFrame(rows)
     original_bld_dataset = BinaryLabelDataset(df=new_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
     
     all_prediction =  [pred for ls in prediction_ls for pred in ls]
-    prediction_dataset = new_dataset.df.copy(deep=True)
+    prediction_dataset = new_dataset.copy(deep=True)
     prediction_dataset[dataset.target] = all_prediction
     prediction_bld_dataset = BinaryLabelDataset(df=prediction_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
 

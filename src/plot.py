@@ -67,7 +67,7 @@ def plot_all(stat_dic, title=None, save_to=None):
     
     fig, ((ax1, ax2, ax3), (ax4, ax5, ax6) ) = plt.subplots(2, 3,figsize=(15, 10))
 
-    x = list(range(len(stat_dic['test_acc_before'])))
+    x = list(range(len(stat_dic['test_acc_after'])))
 
     if title:
         fig.suptitle(title, fontsize=16)

@@ -73,7 +73,7 @@ def args_parser():
 
     parser.add_argument('--idx', type=int, help='Experiment index.')
 
-    parser.add_argument('--beta', type=int, default=0.3, help='Beta parameter for Fairfed, "fairness budget".')
+    parser.add_argument('--beta', type=float, default=0.3, help='Beta parameter for Fairfed, "fairness budget".')
     
     args = parser.parse_args()
     return args

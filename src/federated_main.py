@@ -365,6 +365,153 @@ if __name__ == '__main__':
         print(stat_dic['train_fpr_before'])
         print(stat_dic['train_fpr_after'])
     
+    elif args.fl == "fairfed":
+        # For each (global) round of training
+        local_weights_fair = []
+        for epoch in tqdm(range(args.epochs)):
+            local_losses = []
+            local_weights, local_losses = [], []
+            print(f'\n | Global Training Round : {epoch+1} |\n')
+
+            # Comppute local fairness and accuracy
+            local_fairness_ls = []
+            prediction_ls = []
+            for i in range(args.num_users):
+                local_set_df = local_set_ls[i].train_set
+                local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+                pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+                local_fairness_ls.append(local_fairness)
+                prediction_ls.append(pred_labels)
+
+            # Compute global fairness
+            
+            global_acc, global_fairness = update.get_global_fairness(train_dataset, local_set_ls, prediction_ls, "eod", "train")
+
+            # Compute weighted mean metric gap
+            # print("local fairness list")
+            # print(local_fairness_ls)
+            # print(global_fairness)
+            metric_gap = [abs(global_fairness - lf) for lf in local_fairness_ls]
+            # print(metric_gap)
+            # sample_size_ls = [local_set.train_len for local_set in local_set_ls]
+            metric_gap_avg = np.mean(metric_gap)
+
+
+
+
+            global_model.train()
+            # For each selected user do local_ep round of training
+            for idx in range(args.num_users):
+                local_dataset = local_set_ls[idx]
+                split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+                local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
+                                        idxs=user_groups[idx], logger=logger)
+
+                # Update local model parameters
+                w, loss = local_model.update_weights(
+                    model=copy.deepcopy(global_model), global_round=epoch)
+                
+                # Compute weighted local weights using FairFed formula
+                if epoch == 0:
+                    local_weights_original = (copy.deepcopy(w))
+                    local_weights_fair.append(local_weights_original)
+                else:
+                    # print(";;;")
+                    # # print(local_weights_fair[idx].size())
+                    # print(metric_gap)
+                    # print(metric_gap_avg)
+                    for key in local_weights_fair[idx].keys():
+                        # print(local_weights_fair[idx][key].size())
+                        # offset = - args.beta * (metric_gap[idx] - metric_gap_avg)
+                        # print(offset)
+                        # local_weights_fair[idx][key] = torch.add(local_weights_fair[idx][key], offset) 
+                        local_weights_fair[idx][key] = local_weights_fair[idx][key] - args.beta * (metric_gap[idx] - metric_gap_avg)
+                    # local_weights_fair[idx] = local_weights_fair[idx] - args.beta * (metric_gap[idx] - metric_gap_avg)
+                
+                # Not sure about this
+                # local_weights.append(local_weights_fair[idx] / sum(local_weights_fair))
+                
+                local_losses.append(copy.deepcopy(loss))
+
+            # update global weights
+            # global_weights = average_weights(local_weights)
+            global_weights = average_weights(local_weights_fair)
+
+            # update global weights
+            global_model.load_state_dict(global_weights)
+
+            loss_avg = sum(local_losses) / len(local_losses)
+            train_loss.append(loss_avg)
+
+            # Actually it is local test accuracy
+            # Calculate avg training accuracy over all users at every epoch
+            list_acc, list_loss = [], []
+            global_model.eval()
+            for c in range(args.num_users):
+                local_dataset = local_set_ls[c]
+                split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+                local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
+                                        idxs=user_groups[idx], logger=logger)
+
+                # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
+                #                         idxs=user_groups[idx], logger=logger)
+                
+                acc, loss = local_model.inference(model=global_model)
+                list_acc.append(acc)
+                list_loss.append(loss)
+            train_accuracy.append(sum(list_acc)/len(list_acc))
+
+            # print global training loss after every 'i' rounds
+            if (epoch+1) % print_every == 0:
+                print(f' \nAvg Training Stats after {epoch+1} global rounds:')
+                print(f'Training Loss : {np.mean(np.array(train_loss))}')
+                print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
+        
+        # Evaluation locally after training
+        print("********* Start Local Evaluation and Post-processing **********")
+
+        stat_keys = ['train_acc_before','train_acc_after', 'test_acc_before', 'test_acc_after',
+                    'train_eod_before', 'train_eod_after', 'test_eod_before', 'test_eod_after',
+                    'train_fpr_before', 'train_fpr_after', 'test_fpr_before', 'test_fpr_after',
+                    'train_tpr_before', 'train_tpr_after', 'test_tpr_before', 'test_tpr_after']
+        stat_dic = {k: [0]*args.num_users for k in stat_keys}         
+
+        local_fairness_ls = []
+        local_acc_ls = []
+        for i in range(args.num_users):
+            local_set_df = local_set_ls[i].train_set
+            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+            pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+            local_fairness_ls.append(local_fairness)
+            local_acc_ls.append(accuracy)
+        
+        print("TRAIN SET ----")
+        print("local_fairness_ls")
+        print(local_fairness_ls)
+        print("local acc ls")
+        print(local_acc_ls)
+        stat_dic["train_acc_after"] = local_acc_ls
+        stat_dic["train_eod_after"] = local_fairness_ls
+
+        
+        local_fairness_ls = []
+        local_acc_ls = []
+        for i in range(args.num_users):
+            local_set_df = local_set_ls[i].test_set
+            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+            pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+            local_fairness_ls.append(local_fairness)
+            local_acc_ls.append(accuracy)
+        
+        print("TEST SET ----")
+        print("local_fairness_ls")
+        print(local_fairness_ls)
+        print("local acc ls")
+        print(local_acc_ls)
+        stat_dic["test_acc_after"] = local_acc_ls
+        stat_dic["test_eod_after"] = local_fairness_ls
+
+
 
     statistics_dir = os.getcwd() + '/save/statistics/{}/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}'.\
         format(args.idx, args.fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
