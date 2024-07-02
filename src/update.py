@@ -186,6 +186,7 @@ class LocalUpdate(object):
                 model.zero_grad()
                 # log_probs = model(images)
                 log_probs = model(images).squeeze()
+                log_probs = log_probs.reshape(-1)
                 loss = self.criterion(log_probs, labels)
                 # loss = self.criterion(log_probs, labels.long())
                 loss.backward()
@@ -368,6 +369,24 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
     # accuracy = correct/len(pred_labels)
 
     return pred_labels, accuracy, local_fairness
+
+
+def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test", fairness_metric="eod"):
+    local_fairness_ls = []
+    local_acc_ls = []
+
+    for i in range(num_users):
+        if set == "test":
+            local_set_df = local_set_ls[i].test_set
+        elif set == "train":
+            local_set_df = local_set_ls[i].train_set
+
+        local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+        pred_labels, accuracy, local_fairness = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
+        local_fairness_ls.append(local_fairness)
+        local_acc_ls.append(accuracy)
+    
+    return local_acc_ls, local_fairness_ls
 
 
 def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", set="train"):

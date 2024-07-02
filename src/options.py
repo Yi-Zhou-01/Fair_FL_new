@@ -67,7 +67,9 @@ def args_parser():
     parser.add_argument('--partition_idx', type=int, default=1, help='partition file path')
 
     # Choose which fl algorithm to perform
-    parser.add_argument('--fl', type=str, default='new', help='fl algorithm')
+    parser.add_argument('--fl_new', type=bool, default=True, help='fl algorithm: new')
+
+    parser.add_argument('--fl_fairfed', type=bool, default=True, help='fl algorithm: FairFed')
 
     parser.add_argument('--post_proc_cost', type=str, default='fpr', help='post-processing cost constraint.')
 
@@ -75,6 +77,9 @@ def args_parser():
 
     parser.add_argument('--beta', type=float, default=0.3, help='Beta parameter for Fairfed, "fairness budget".')
     
+    parser.add_argument('--local_test_ratio', type=float, default=0.2, help='Local test set ratio')
+    
+
     args = parser.parse_args()
     return args
 
