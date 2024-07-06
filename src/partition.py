@@ -150,7 +150,7 @@ def get_args():
     parser.add_argument('--n_clients', type=int, default=10,  help='number of workers in a distributed cluster')
     # parser.add_argument('--init_seed', type=int, default=0, help="Random seed")
     # "./data/adult/adult_all_33col_70train_0.csv"
-    parser.add_argument('--data_path', type=str, required=False, default="./data/adult/adult_all_33col.csv", help="Data directory")
+    parser.add_argument('--data_path', type=str, required=False, default="/data/adult/adult_all_33col.csv", help="Data directory")
     parser.add_argument('--save_to_dir', type=str, required=False, default="/data/adult/partition/", help="Output directory")
     parser.add_argument('--partition_idx', type=str, required=False, default="0", help="Output directory")
     
@@ -169,7 +169,8 @@ if __name__ == '__main__':
     
     args = get_args()
 
-    csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_70train_0.csv'
+    csv_file_train = os.getcwd()+args.data_path
+    # '/data/adult/adult_all_33col_70train_0.csv'
 
     train_data = AdultDataset(csv_file_train)
     labels = train_data.df[args.target_attr].to_numpy()
