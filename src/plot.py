@@ -74,10 +74,10 @@ def plot_all(stat_dic, title=None, save_to=None):
 
     ax1.axhline(0.8, color='lightsteelblue', alpha=0.6)
     ax1.axhline(0.1, color='orange', alpha=0.4)
-    ax1.plot(x, stat_dic['test_acc_before'], color='blue',  label='acc_before')
-    ax1.plot(x, stat_dic['test_acc_after'],  color="red", label='acc_after')
-    ax1.plot(x, stat_dic['test_eod_before'], color='blue', linestyle='dashed', label='eod_before')
-    ax1.plot(x, stat_dic['test_eod_after'],  color="red", linestyle='dashed', label='eod_after')
+    ax1.plot(x, stat_dic['test_acc_before'], color='blue', marker='o', markersize=10, label='acc_before')
+    ax1.plot(x, stat_dic['test_acc_after'],  color="red", marker='o',markersize=10,  label='acc_after')
+    ax1.plot(x, stat_dic['test_eod_before'], color='blue', marker='o',markersize=10,  linestyle='dashed', label='eod_before')
+    ax1.plot(x, stat_dic['test_eod_after'],  color="red",marker='o',markersize=10,  linestyle='dashed', label='eod_after')
     
 
     ax1.set_xlabel("Client ID")
@@ -87,16 +87,16 @@ def plot_all(stat_dic, title=None, save_to=None):
 
 
     ax2.axhline(0.1, color='orange', alpha=0.4)
-    ax2.plot(x, stat_dic['test_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
-    ax2.plot(x, stat_dic['test_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
+    ax2.plot(x, stat_dic['test_fpr_before'], color='blue',marker='o', linestyle='dashed', label='fpr_before')
+    ax2.plot(x, stat_dic['test_fpr_after'],  color="red",marker='o', linestyle='dashed', label='fpr_after')
     ax2.set_xlabel("Client ID")
     ax2.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax2.set_title('FPR - Test')
     ax2.legend()
 
     ax3.axhline(0.1, color='orange', alpha=0.4)
-    ax3.plot(x, stat_dic['test_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
-    ax3.plot(x, stat_dic['test_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
+    ax3.plot(x, stat_dic['test_tpr_before'], color='blue',marker='o', linestyle='dashed', label='tpr_before')
+    ax3.plot(x, stat_dic['test_tpr_after'],  color="red",marker='o', linestyle='dashed', label='tpr_after')
     ax3.set_xlabel("Client ID")
     ax3.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax3.set_title('TPR - Test')
@@ -104,10 +104,10 @@ def plot_all(stat_dic, title=None, save_to=None):
 
     ax4.axhline(0.8, color='lightsteelblue', alpha=0.6)
     ax4.axhline(0.1, color='orange', alpha=0.4)
-    ax4.plot(x, stat_dic['train_acc_before'], color='blue',  label='acc_before')
-    ax4.plot(x, stat_dic['train_acc_after'],  color="red", label='acc_after')
-    ax4.plot(x, stat_dic['train_eod_before'], color='blue', linestyle='dashed', label='eod_before')
-    ax4.plot(x, stat_dic['train_eod_after'],  color="red", linestyle='dashed', label='eod_after')
+    ax4.plot(x, stat_dic['train_acc_before'], color='blue',marker='o',  label='acc_before')
+    ax4.plot(x, stat_dic['train_acc_after'],  color="red",marker='o', label='acc_after')
+    ax4.plot(x, stat_dic['train_eod_before'], color='blue',marker='o', linestyle='dashed', label='eod_before')
+    ax4.plot(x, stat_dic['train_eod_after'],  color="red",marker='o', linestyle='dashed', label='eod_after')
     
     ax4.set_xlabel("Client ID")
     ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
@@ -116,16 +116,16 @@ def plot_all(stat_dic, title=None, save_to=None):
     ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
 
     ax5.axhline(0.1, color='orange', alpha=0.4)
-    ax5.plot(x, stat_dic['train_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
-    ax5.plot(x, stat_dic['train_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
+    ax5.plot(x, stat_dic['train_fpr_before'], color='blue',marker='o', linestyle='dashed', label='fpr_before')
+    ax5.plot(x, stat_dic['train_fpr_after'],  color="red",marker='o', linestyle='dashed', label='fpr_after')
     ax5.set_xlabel("Client ID")
     ax5.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax5.set_title('FPR - Train')
     ax5.legend()
 
     ax6.axhline(0.1, color='orange', alpha=0.4)
-    ax6.plot(x, stat_dic['train_tpr_before'], color='blue', linestyle='dashed', label='tpr_before')
-    ax6.plot(x, stat_dic['train_tpr_after'],  color="red", linestyle='dashed', label='tpr_after')
+    ax6.plot(x, stat_dic['train_tpr_before'], color='blue',marker='o', linestyle='dashed', label='tpr_before')
+    ax6.plot(x, stat_dic['train_tpr_after'],  color="red",marker='o', linestyle='dashed', label='tpr_after')
     ax6.set_xlabel("Client ID")
     ax6.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax6.set_title('TPR - Train')
@@ -149,17 +149,19 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
 
     fig, ((ax1, ax2), (ax4, ax5) ) = plt.subplots(2, 2,figsize=(12, 10))
 
-    x = list(range(len(stat_dic['train_acc_new'])))
+    x = [x + 1 for x in list(range(len(stat_dic['train_acc_new'])))] 
+    y_lim = [-0.05, 1.0]
 
     if title:
         fig.suptitle(title, fontsize=16)
 
     ax1.axhline(0.8, color='lightsteelblue', alpha=0.6)
     ax1.axhline(0.1, color='orange', alpha=0.4)
-    ax1.plot(x, stat_dic['test_acc_fedavg'], color='blue',  label='acc_fedavg')
-    ax1.plot(x, stat_dic['test_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
-    ax1.plot(x, stat_dic['test_acc_new'],  color="red", label='acc_new')
-    ax1.plot(x, stat_dic['test_eod_new'],  color="red", linestyle='dashed', label='eod_new')
+    ax1.plot(x, stat_dic['test_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
+    ax1.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
+    ax1.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
+    ax1.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
+    ax1.set_ylim(y_lim)
     
 
     ax1.set_xlabel("Client ID")
@@ -170,18 +172,19 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
 
     ax2.axhline(0.1, color='orange', alpha=0.4)
     ax2.axhline(0.8, color='lightsteelblue', alpha=0.6)
-    ax2.plot(x, stat_dic['test_acc_fairfed'], color='green', label='acc_fairfed')
-    ax2.plot(x, stat_dic['test_eod_fairfed'],  color="green", linestyle='dashed', label='eod_fairfed')
-    ax2.plot(x, stat_dic['test_acc_new'],  color="red", label='acc_new')
-    ax2.plot(x, stat_dic['test_eod_new'],  color="red", linestyle='dashed', label='eod_new')
+    ax2.plot(x, stat_dic['test_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
+    ax2.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
+    ax2.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
+    ax2.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
 
-    ax2.plot(x, stat_dic['test_acc_fedavg'], color='blue',  label='acc_fedavg')
-    ax2.plot(x, stat_dic['test_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
+    ax2.plot(x, stat_dic['test_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
+    ax2.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
 
     ax2.set_xlabel("Client ID")
     ax2.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax2.set_title('New v.s. Fairfed - Test')
     ax2.legend()
+    ax2.set_ylim(y_lim)
 
 
     ax4.axhline(0.8, color='lightsteelblue', alpha=0.6)
@@ -191,33 +194,36 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
     # ax4.plot(x, stat_dic['train_eod_before'], color='blue', linestyle='dashed', label='eod_before')
     # ax4.plot(x, stat_dic['train_eod_after'],  color="red", linestyle='dashed', label='eod_after')
 
-    ax4.plot(x, stat_dic['train_acc_fedavg'], color='blue',  label='acc_fedavg')
-    ax4.plot(x, stat_dic['train_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
-    ax4.plot(x, stat_dic['train_acc_new'],  color="red", label='acc_new')
-    ax4.plot(x, stat_dic['train_eod_new'],  color="red", linestyle='dashed', label='eod_new')
+    ax4.plot(x, stat_dic['train_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
+    ax4.plot(x, stat_dic['train_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
+    ax4.plot(x, stat_dic['train_acc_new'],  color="red", marker='o', label='acc_new')
+    ax4.plot(x, stat_dic['train_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
     
     ax4.set_xlabel("Client ID")
     ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax4.set_title('Accuracy & EOD - Train')
     ax4.legend(loc="upper right")
     ax4.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+    ax4.set_ylim(y_lim)
+
 
     ax5.axhline(0.1, color='orange', alpha=0.4)
     ax5.axhline(0.8, color='lightsteelblue', alpha=0.6)
     # ax5.plot(x, stat_dic['train_fpr_before'], color='blue', linestyle='dashed', label='fpr_before')
     # ax5.plot(x, stat_dic['train_fpr_after'],  color="red", linestyle='dashed', label='fpr_after')
-    ax5.plot(x, stat_dic['train_acc_fairfed'], color='green', label='acc_fairfed')
-    ax5.plot(x, stat_dic['train_eod_fairfed'],  color="green", linestyle='dashed', label='eod_fairfed')
-    ax5.plot(x, stat_dic['train_acc_new'],  color="red", label='acc_new')
-    ax5.plot(x, stat_dic['train_eod_new'],  color="red", linestyle='dashed', label='eod_new')
+    ax5.plot(x, stat_dic['train_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
+    ax5.plot(x, stat_dic['train_eod_fairfed'],  color="green", marker='o', linestyle='dashed', label='eod_fairfed')
+    ax5.plot(x, stat_dic['train_acc_new'],  color="red", marker='o', label='acc_new')
+    ax5.plot(x, stat_dic['train_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
 
-    ax5.plot(x, stat_dic['train_acc_fedavg'], color='blue',  label='acc_fedavg')
-    ax5.plot(x, stat_dic['train_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
+    ax5.plot(x, stat_dic['train_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
+    ax5.plot(x, stat_dic['train_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
 
     ax5.set_xlabel("Client ID")
     ax5.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax5.set_title('New v.s. Fairfed - Train')
     ax5.legend()
+    ax5.set_ylim(y_lim)
 
 
     if save_to:
