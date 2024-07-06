@@ -175,6 +175,9 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
     ax2.plot(x, stat_dic['test_acc_new'],  color="red", label='acc_new')
     ax2.plot(x, stat_dic['test_eod_new'],  color="red", linestyle='dashed', label='eod_new')
 
+    ax2.plot(x, stat_dic['test_acc_fedavg'], color='blue',  label='acc_fedavg')
+    ax2.plot(x, stat_dic['test_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
+
     ax2.set_xlabel("Client ID")
     ax2.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax2.set_title('New v.s. Fairfed - Test')
@@ -207,6 +210,9 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
     ax5.plot(x, stat_dic['train_eod_fairfed'],  color="green", linestyle='dashed', label='eod_fairfed')
     ax5.plot(x, stat_dic['train_acc_new'],  color="red", label='acc_new')
     ax5.plot(x, stat_dic['train_eod_new'],  color="red", linestyle='dashed', label='eod_new')
+
+    ax5.plot(x, stat_dic['train_acc_fedavg'], color='blue',  label='acc_fedavg')
+    ax5.plot(x, stat_dic['train_eod_fedavg'], color='blue', linestyle='dashed', label='eod_fedavg')
 
     ax5.set_xlabel("Client ID")
     ax5.set_xticks(np.arange(min(x), max(x)+1, 1.0))

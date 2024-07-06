@@ -24,9 +24,9 @@
 
 ### Run commands
 
-Run experiments using more balanced sample distribution (partition #5) and save results to experiment #100:
+Run experiments using new method and FairFed on more balanced sample distribution (partition #5) and save results to experiment #100:
 
-```python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 10 --frac 0.1 --local_ep 6 --fl "new" --idx 100 --partition_idx 5```
+```python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 10 --frac 0.1 --local_ep 2 --fl_new True --fl_fairfed True --post_proc_cost "fnr" --idx 100 --partition_idx 5 --beta 1```
 
 
 Generate a new sample partition using Dirichlet distribution with alpha=0.9 and save to partition file #10:

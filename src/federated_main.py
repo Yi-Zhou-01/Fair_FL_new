@@ -134,6 +134,7 @@ if __name__ == '__main__':
 
 
     if args.fl_new:
+        print("********* Start FedAvg/New Training **********")
 
         # For each (global) round of training
         for epoch in tqdm(range(args.epochs)):
@@ -192,7 +193,7 @@ if __name__ == '__main__':
                 print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
         
         # Evaluation locally after training
-        print("********* Start Local Evaluation and Post-processing **********")
+        # print("********* Start Local Evaluation and Post-processing **********")
 
         
         # Measure local train/test acc & fairness before post-processing
@@ -360,6 +361,7 @@ if __name__ == '__main__':
         # print(stat_dic['train_fpr_after'])
     
     if args.fl_fairfed:
+        print("********* Start FairFed Training **********")
         # For each (global) round of training
         local_weights_fair = []
         for epoch in tqdm(range(args.epochs)):
@@ -450,7 +452,7 @@ if __name__ == '__main__':
                 print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
         
         # Evaluation locally after training
-        print("********* Start Local Evaluation and Post-processing **********")
+        # print("********* Start Local Evaluation and Post-processing **********")
 
         # stat_keys = ['train_acc_before','train_acc_after', 'test_acc_before', 'test_acc_after',
         #             'train_eod_before', 'train_eod_after', 'test_eod_before', 'test_eod_after',

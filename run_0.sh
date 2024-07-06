@@ -46,3 +46,7 @@ python src/partition.py --partition=diri --n_clients=10 --target_attr=income --p
 python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 10 --frac 0.1 --local_ep 6 --fl "fairfed" --post_proc_cost "fnr" --idx 1 --partition_idx 5 --beta 0.5
 
 python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 4 --frac 0.1 --local_ep 2 --fl "fairfed" --post_proc_cost "fnr" --idx 5 --partition_idx 6 --beta 0.5
+
+python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 4 --frac 0.1 --local_ep 2 --fl_new True --fl_fairfed True --post_proc_cost "fnr" --idx 7 --partition_idx 6 --beta 1
+
+python src/federated_main.py --model=mlp --dataset=adult --epochs=4 --num_users 10 --frac 0.1 --local_ep 2 --fl_new True --fl_fairfed True --post_proc_cost "fnr" --idx 7 --partition_idx 5 --beta 1

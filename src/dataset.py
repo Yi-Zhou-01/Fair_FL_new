@@ -82,7 +82,7 @@ class AdultDataset(Dataset):
 def get_bld_dataset_w_pred(test_dataset, prediction_test):
     new_df = test_dataset.df.copy(deep=True)
     new_df[test_dataset.target] = prediction_test
-    print("Check sum prediction equal: ", sum(prediction_test), sum(new_df[test_dataset.target]))
+    # print("Check sum prediction equal: ", sum(prediction_test), sum(new_df[test_dataset.target]))
     return BinaryLabelDataset(df=new_df, label_names=[test_dataset.target], protected_attribute_names=['sex_1'])
 
 
