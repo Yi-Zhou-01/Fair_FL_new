@@ -362,6 +362,17 @@ if __name__ == '__main__':
     
     if args.fl_fairfed:
         print("********* Start FairFed Training **********")
+
+        # # Initiaize local models
+        # local_models = []
+        # for i in range(args.num_users):
+        #     local_dataset = local_set_ls[idx]
+        #     split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+        #     local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
+        #                             idxs=user_groups[idx], logger=logger)
+        #     local_models.append(local_model)
+        
+
         # For each (global) round of training
         local_weights_fair = []
         for epoch in tqdm(range(args.epochs)):
@@ -392,6 +403,7 @@ if __name__ == '__main__':
 
             global_model.train()
             # For each selected user do local_ep round of training
+            local_weights = []
             for idx in range(args.num_users):
                 local_dataset = local_set_ls[idx]
                 split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
@@ -402,27 +414,48 @@ if __name__ == '__main__':
                 w, loss = local_model.update_weights(
                     model=copy.deepcopy(global_model), global_round=epoch)
                 
-                # Compute weighted local weights using FairFed formula
-                if epoch == 0:
-                    local_weights_original = (copy.deepcopy(w))
-                    local_weights_fair.append(local_weights_original)
-                else:
-
-                    for key in local_weights_fair[idx].keys():
-                        local_weights_fair[idx][key] = local_weights_fair[idx][key] - args.beta * (metric_gap[idx] - metric_gap_avg)
-                    # local_weights_fair[idx] = local_weights_fair[idx] - args.beta * (metric_gap[idx] - metric_gap_avg)
-                
-                # Not sure about this
-                # local_weights.append(local_weights_fair[idx] / sum(local_weights_fair))
-                
+                local_weights.append(copy.deepcopy(w))
                 local_losses.append(copy.deepcopy(loss))
 
-            # update global weights
-            # global_weights = average_weights(local_weights)
-            global_weights = average_weights(local_weights_fair)
+            # print(local_weights[0].keys())
+            # print(type(local_weights[0]['layer_1.weight']))
+
+            client_update_weight = []
+            for idx in range(args.num_users):
+                client_update_weight.append(np.exp( - args.beta * (metric_gap[idx] - metric_gap_avg)) * local_set_ls[idx].size / train_dataset.size)
+            
+            
+            new_weights = copy.deepcopy(local_weights[0])
+            for key in new_weights.keys():
+                new_weights[key] = torch.zeros(size=local_weights[0][key].shape)
+
+            for key in new_weights.keys():
+                for idx in range(args.num_users):
+                    new_weights[key] += ((client_update_weight[idx] / np.sum(client_update_weight)) * local_weights[idx][key])
+
+
+            global_model.load_state_dict(new_weights)
+                # # Compute weighted local weights using FairFed formula
+                # if epoch == 0:
+                #     local_weights_original = (copy.deepcopy(w))
+                #     local_weights_fair.append(local_weights_original)
+                # else:
+
+                #     for key in local_weights_fair[idx].keys():
+                #         local_weights_fair[idx][key] = local_weights_fair[idx][key] - args.beta * (metric_gap[idx] - metric_gap_avg)
+                #     # local_weights_fair[idx] = local_weights_fair[idx] - args.beta * (metric_gap[idx] - metric_gap_avg)
+                
+                # # Not sure about this
+                # # local_weights.append(local_weights_fair[idx] / sum(local_weights_fair))
+                
+                # local_losses.append(copy.deepcopy(loss))
 
             # update global weights
-            global_model.load_state_dict(global_weights)
+            # # global_weights = average_weights(local_weights)
+            # global_weights = average_weights(local_weights_fair)
+
+            # # update global weights
+            # global_model.load_state_dict(global_weights)
 
             loss_avg = sum(local_losses) / len(local_losses)
             train_loss.append(loss_avg)

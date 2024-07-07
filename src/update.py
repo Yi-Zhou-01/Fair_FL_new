@@ -62,6 +62,7 @@ class LocalDataset(object):
         self.train_len = len(self.train_set_idxs)
         self.test_len = len(self.test_set_idxs)
         self.val_len = len(self.val_set_idxs)
+        self.size = len(local_idxs)
         # self.train_set, self.test_set, self.val_set = self.train_test_split()
         
 
@@ -326,7 +327,7 @@ def get_prediction(args, model, test_dataset):
     # print(pred_labels)
 
     correct = torch.sum(torch.eq(pred_labels, labels)).item()
-    print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
+    # print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
     accuracy = correct/len(pred_labels)
 
     return pred_labels, accuracy
@@ -365,7 +366,7 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
         local_fairness = cm_pred_train.equalized_odds_difference()
 
     # correct = torch.sum(torch.eq(pred_labels, labels)).item()
-    print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
+    # print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
     # accuracy = correct/len(pred_labels)
 
     return pred_labels, accuracy, local_fairness

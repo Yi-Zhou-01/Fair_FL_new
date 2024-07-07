@@ -50,6 +50,7 @@ class AdultDataset(Dataset):
         self.y = self.df[self.target].to_numpy().astype(np.float32)
 
         self.X = self.standardlize_X(self.X)
+        self.size = len(self.y)
 
         # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
         # y = torch.from_numpy(y).type(torch.float)
@@ -119,6 +120,8 @@ def get_dataset(args):
         csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
 
 
+        # print("csv_file_train")
+        # print(csv_file_train)
 
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
