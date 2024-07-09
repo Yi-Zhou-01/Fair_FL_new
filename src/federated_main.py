@@ -21,7 +21,7 @@ import dataset
 
 # from options import args_parser
 from update import LocalUpdate, test_inference
-from models import MLP, MLPAdult, CNNMnist, CNNFashion_Mnist, CNNCifar
+from models import MLP, MLPAdult, CNNMnist, CNNFashion_Mnist, CNNCifar, Plain_LR_Adult
 from utils import average_weights, exp_details
 import os
 import update
@@ -86,7 +86,6 @@ if __name__ == '__main__':
                 len_in *= x
                 global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
                                 dim_out=args.num_classes)
-
         else:
             img_size = train_dataset[0][0].shape
             len_in = 1
@@ -94,6 +93,10 @@ if __name__ == '__main__':
                 len_in *= x
                 global_model = MLP(dim_in=len_in, dim_hidden=64,
                                 dim_out=args.num_classes)
+    elif args.model == 'plain':
+        if args.dataset == 'adult':
+            len_in = 32
+            global_model = Plain_LR_Adult(dim_in=len_in)
     else:
         exit('Error: unrecognized model')
 
@@ -116,12 +119,19 @@ if __name__ == '__main__':
 
     stat_keys = []
     set_split = ["train", "test"]
+    # if args.plot_tpfp:
+    #     local_metrics = ["acc", "eod", "tpr", "fpr"]
+    # else:
+    #     local_metrics = ["acc", "eod"]
     local_metrics = ["acc", "eod"]
 
     if args.fl_new:
         stat_keys += [ss+"_"+lm+"_"+"new" for ss in set_split for lm in local_metrics]
     # if args.fl_avg:
         stat_keys += [ss+"_"+lm+"_"+"fedavg" for ss in set_split for lm in local_metrics]
+        if args.plot_tpfp:
+            stat_keys += [ss+"_"+lm+"_"+"new" for ss in set_split for lm in  ["tpr", "fpr"]]
+            stat_keys += [ss+"_"+lm+"_"+"fedavg" for ss in set_split for lm in  ["tpr", "fpr"]]
     if args.fl_fairfed:
         stat_keys += [ss+"_"+lm+"_"+"fairfed" for ss in set_split for lm in local_metrics]
 
@@ -130,7 +140,8 @@ if __name__ == '__main__':
     #                 'train_fpr_before', 'train_fpr_after', 'test_fpr_before', 'test_fpr_after',
     #                 'train_tpr_before', 'train_tpr_after', 'test_tpr_before', 'test_tpr_after']
     
-    stat_dic = {k: [0]*args.num_users for k in stat_keys}
+    # stat_dic = {k: [0]*args.num_users for k in stat_keys}
+    stat_dic = {k: [] for k in stat_keys}
 
 
     if args.fl_new:
@@ -198,15 +209,31 @@ if __name__ == '__main__':
         
         # Measure local train/test acc & fairness before post-processing
 
-        acc_test, eod_test = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
-                                                           args.gpu, set="test", fairness_metric="eod")
-        acc_train, eod_train = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
-                                                            args.gpu, set="train", fairness_metric="eod")
+
         
-        stat_dic["test_acc_fedavg"] = acc_test
-        stat_dic["test_eod_fedavg"] = eod_test
-        stat_dic["train_acc_fedavg"] = acc_train
-        stat_dic["train_eod_fedavg"] = eod_train
+        
+        if args.plot_tpfp:
+            acc_test, fairness_test = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+                                                           args.gpu, set="test", fairness_metric=["eod","tpr","fpr"])
+            acc_train, fairness_train = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+                                                            args.gpu, set="train", fairness_metric=["eod","tpr","fpr"])
+            stat_dic["test_acc_fedavg"] = acc_test
+            stat_dic["train_acc_fedavg"] = acc_train
+            stat_dic["test_eod_fedavg"] = fairness_test["eod"]
+            stat_dic["train_eod_fedavg"] = fairness_train["eod"]
+            stat_dic["test_tpr_fedavg"] = fairness_test["tpr"]
+            stat_dic["train_tpr_fedavg"] = fairness_train["tpr"]
+            stat_dic["test_fpr_fedavg"] = fairness_test["fpr"]
+            stat_dic["train_fpr_fedavg"] = fairness_train["fpr"]
+        else:
+            acc_test, fairness_test = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+                                                           args.gpu, set="test", fairness_metric=["eod"])
+            acc_train, fairness_train = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+                                                            args.gpu, set="train", fairness_metric=["eod"])
+            stat_dic["test_acc_fedavg"] = acc_test
+            stat_dic["test_eod_fedavg"] = fairness_test["eod"]
+            stat_dic["train_acc_fedavg"] = acc_train
+            stat_dic["train_eod_fedavg"] = fairness_train["eod"]
 
 
         '''
@@ -253,10 +280,10 @@ if __name__ == '__main__':
         unprivileged_groups = [{train_dataset.s_attr: 0}]
 
 
-        train_acc_new = []
-        train_eod_new = []
-        test_acc_new = []
-        test_eod_new = []
+        # train_acc_new = []
+        # test_acc_new = []
+        # train_eod_new = []
+        # test_eod_new = []
             
         # Apply post-processing locally at each client:
         for idx in range(args.num_users):
@@ -317,8 +344,13 @@ if __name__ == '__main__':
                         privileged_groups=privileged_groups)
             
             
-            train_acc_new.append(cm_pred_train_debiased.accuracy())
-            train_eod_new.append(cm_pred_train_debiased.equalized_odds_difference())
+            # train_acc_new.append(cm_pred_train_debiased.accuracy())
+            # train_eod_new.append(cm_pred_train_debiased.equalized_odds_difference())
+            stat_dic['train_acc_new'].append(cm_pred_train_debiased.accuracy())
+            stat_dic['train_eod_new'].append(cm_pred_train_debiased.equalized_odds_difference())
+            if args.plot_tpfp:
+                stat_dic['train_tpr_new'].append(cm_pred_train_debiased.true_positive_rate_difference())
+                stat_dic['train_fpr_new'].append(cm_pred_train_debiased.false_positive_rate_difference())
             # stat_dic['train_eod_after'].append(cm_pred_train_debiased.average_abs_odds_difference())
             # stat_dic['train_fpr_new'].append(abs(cm_pred_train_debiased.difference(cm_pred_train_debiased.false_positive_rate)))
             # stat_dic['train_tpr_new'].append(abs( cm_pred_train_debiased.difference(cm_pred_train_debiased.true_positive_rate)))
@@ -328,16 +360,21 @@ if __name__ == '__main__':
                         unprivileged_groups=unprivileged_groups,
                         privileged_groups=privileged_groups)
 
-            test_acc_new.append(cm_pred_test_debiased.accuracy())
-            test_eod_new.append(cm_pred_test_debiased.equalized_odds_difference())
+            # test_acc_new.append(cm_pred_test_debiased.accuracy())
+            # test_eod_new.append(cm_pred_test_debiased.equalized_odds_difference())
+            stat_dic['test_acc_new'].append(cm_pred_test_debiased.accuracy())
+            stat_dic['test_eod_new'].append(cm_pred_test_debiased.equalized_odds_difference())
+            if args.plot_tpfp:
+                stat_dic['test_tpr_new'].append(cm_pred_test_debiased.true_positive_rate_difference())
+                stat_dic['test_fpr_new'].append(cm_pred_test_debiased.false_positive_rate_difference())
             # stat_dic['test_eod_after'].append(cm_pred_test_debiased.average_abs_odds_difference())
             # stat_dic['test_fpr_new'].append(abs(cm_pred_test_debiased.difference(cm_pred_test_debiased.false_positive_rate)))
             # stat_dic['test_tpr_new'].append(abs( cm_pred_test_debiased.difference(cm_pred_test_debiased.true_positive_rate)))
         
-        stat_dic['train_acc_new'] = train_acc_new
-        stat_dic['train_eod_new'] = train_eod_new
-        stat_dic['test_acc_new'] = test_acc_new
-        stat_dic['test_eod_new'] = test_eod_new
+        # stat_dic['train_acc_new'] = train_acc_new
+        # stat_dic['train_eod_new'] = train_eod_new
+        # stat_dic['test_acc_new'] = test_acc_new
+        # stat_dic['test_eod_new'] = test_eod_new
 
 
         print("Test Acc ...")
@@ -387,7 +424,7 @@ if __name__ == '__main__':
                 local_set_df = local_set_ls[i].train_set
                 local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
                 pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
-                local_fairness_ls.append(local_fairness)
+                local_fairness_ls.append(local_fairness["eod"])
                 prediction_ls.append(pred_labels)
 
             # Compute global fairness
@@ -499,7 +536,7 @@ if __name__ == '__main__':
             local_set_df = local_set_ls[i].train_set
             local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
             pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
-            local_fairness_ls.append(local_fairness)
+            local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
         
         print("TRAIN SET ----")
@@ -517,7 +554,7 @@ if __name__ == '__main__':
             local_set_df = local_set_ls[i].test_set
             local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
             pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
-            local_fairness_ls.append(local_fairness)
+            local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
         
         print("TEST SET ----")
@@ -541,6 +578,10 @@ if __name__ == '__main__':
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
+    print(stat_dic)
+    for key in stat_dic.keys():
+        print(key, len(stat_dic[key]))
+    # print(stat_dic.shape)
     stat_df = pd.DataFrame(stat_dic)
     stat_df.to_csv(statistics_dir + "/stats.csv")
 
@@ -563,7 +604,7 @@ if __name__ == '__main__':
     # plot.plot_all(stat_dic, title=fig_title,
     #             save_to=plot_file_all)
     
-    plot.plot_multi_exp(stat_dic, new=args.fl_new, fairfed=args.fl_fairfed,
+    plot.plot_multi_exp(stat_dic, new=args.fl_new, plot_tpfp=args.plot_tpfp,
                         title=fig_title, save_to=plot_file_all)
 
 

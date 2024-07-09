@@ -62,6 +62,34 @@ class MLPAdult(nn.Module):
         return network
 
 
+class Plain_LR_Adult(nn.Module):
+    def __init__(self, dim_in):
+        super(Plain_LR_Adult, self).__init__()
+
+        self.input_size = dim_in
+        self.fc1 = nn.Linear(self.input_size, 1)
+
+        # super(MLPAdult, self).__init__()
+        # self.layer_1 = nn.Linear(in_features=32, out_features=64)
+        # self.layer_2 = nn.Linear(in_features=64, out_features=128)
+        # self.layer_3 = nn.Linear(in_features=128, out_features=64)
+        # self.layer_4 = nn.Linear(in_features=64, out_features=1)
+        # self.relu = nn.ReLU()
+        # self.dropout = nn.Dropout(0.1)
+    def forward(self, x):
+        prediction = nn.functional.sigmoid(self.fc1(x))
+
+        return prediction
+
+    # def forward(self, x):
+    #     x = self.dropout(self.relu(self.layer_1(x)))
+    #     x = self.dropout(self.relu(self.layer_2(x)))
+    #     x = self.dropout(self.relu(self.layer_3(x)))
+    #     network = self.layer_4(x)
+    #     return network
+
+    
+
 # class Classification_AdultCensus(nn.Module):
 #     def __init__(self):
 #         super().__init__()

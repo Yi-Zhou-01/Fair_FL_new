@@ -138,7 +138,9 @@ def plot_all(stat_dic, title=None, save_to=None):
         plt.show()
 
 
-def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
+def plot_multi_exp(stat_dic, new=True, plot_tpfp=True, title=None, save_to=None):
+
+    # false_negative_rate_difference
 
     # stat_keys = []
     # set_split = ["train", "test"]
@@ -147,13 +149,56 @@ def plot_multi_exp(stat_dic, new=True, fairfed=True, title=None, save_to=None):
     # if args.fl_new:
     #     stat_keys += [ss+"_"+lm+"_"+"new" for ss in set_split for lm in local_metrics]
 
-    fig, ((ax1, ax2), (ax4, ax5) ) = plt.subplots(2, 2,figsize=(12, 10))
+    if plot_tpfp:
+        fig, ((ax1, ax2, ax3, ax30), (ax4, ax5, ax6, ax7) ) = plt.subplots(2, 4,figsize=(16, 8))
+    else:
+        fig, ((ax1, ax2), (ax4, ax5) ) = plt.subplots(2, 2,figsize=(12, 10))
 
     x = [x + 1 for x in list(range(len(stat_dic['train_acc_new'])))] 
     y_lim = [-0.05, 1.0]
 
     if title:
         fig.suptitle(title, fontsize=16)
+
+    
+    if plot_tpfp: 
+        # Plot Test TPR FPR
+        ax3.axhline(0.1, color='orange', alpha=0.4)
+        ax3.axhline(0, color='black', alpha=0.4)
+        ax3.axhline(-0.1, color='orange', alpha=0.4)
+        ax3.plot(x, (stat_dic['test_tpr_fedavg']), color='blue', marker='o',  label='tpr_fedavg')
+        ax3.plot(x, (stat_dic['test_tpr_new']),  color="red", marker='o', label='tpr_new')
+        ax3.set_title('TPR - Test')
+        ax3.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+        ax3.legend()
+
+        ax30.axhline(0.1, color='orange', alpha=0.4)
+        ax30.axhline(0, color='black', alpha=0.4)
+        ax30.axhline(-0.1, color='orange', alpha=0.4)
+        ax30.plot(x, (stat_dic['test_fpr_fedavg']), color='blue', marker='o', linestyle='dashed', label='fpr_fedavg')
+        ax30.plot(x, (stat_dic['test_fpr_new']),  color="red", marker='o', linestyle='dashed', label='fpr_new')
+        
+        ax30.set_title('FPR - Test')
+        ax30.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+        ax30.legend()
+
+        ax6.axhline(0.1, color='orange', alpha=0.4)
+        ax6.axhline(0, color='black', alpha=0.4)
+        ax6.axhline(-0.1, color='orange', alpha=0.4)
+        ax6.plot(x, (stat_dic['train_tpr_fedavg']), color='blue', marker='o',  label='tpr_fedavg')
+        ax6.plot(x, (stat_dic['train_tpr_new']),  color="red", marker='o', label='tpr_new')
+        ax6.set_title('TPR - Train')
+        ax6.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+        ax6.legend()
+
+        ax7.axhline(0.1, color='orange', alpha=0.4)
+        ax7.axhline(0, color='black', alpha=0.4)
+        ax7.axhline(-0.1, color='orange', alpha=0.4)
+        ax7.plot(x, (stat_dic['train_fpr_fedavg']), color='blue', marker='o', linestyle='dashed', label='fpr_fedavg')
+        ax7.plot(x, (stat_dic['train_fpr_new']),  color="red", marker='o', linestyle='dashed', label='fpr_new')
+        ax7.set_title('FPR - Train')
+        ax7.set_xticks(np.arange(min(x), max(x)+1, 1.0))
+        ax7.legend()
 
     ax1.axhline(0.8, color='lightsteelblue', alpha=0.6)
     ax1.axhline(0.1, color='orange', alpha=0.4)

@@ -78,6 +78,8 @@ def args_parser():
     parser.add_argument('--beta', type=float, default=0.3, help='Beta parameter for Fairfed, "fairness budget".')
     
     parser.add_argument('--local_test_ratio', type=float, default=0.2, help='Local test set ratio')
+
+    parser.add_argument('--plot_tpfp', type=bool, default=False, help='Local test set ratio')
     
 
     args = parser.parse_args()

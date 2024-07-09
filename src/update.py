@@ -62,7 +62,8 @@ class LocalDataset(object):
         self.train_len = len(self.train_set_idxs)
         self.test_len = len(self.test_set_idxs)
         self.val_len = len(self.val_set_idxs)
-        self.size = len(local_idxs)
+        
+        self.size = len(self.local_dataset)
         # self.train_set, self.test_set, self.val_set = self.train_test_split()
         
 
@@ -333,7 +334,7 @@ def get_prediction(args, model, test_dataset):
     return pred_labels, accuracy
 
 
-def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
+def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     
     """ Returns the test accuracy and loss.
     """
@@ -362,8 +363,14 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
     privileged_groups=privileged_groups)
 
     accuracy = cm_pred_train.accuracy()
-    if metric == "eod":
-        local_fairness = cm_pred_train.equalized_odds_difference()
+    local_fairness = {}
+    if "eod" in metric:
+        local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
+    if "tpr" in metric:
+        local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
+    if "fpr" in metric:
+        local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
+
 
     # correct = torch.sum(torch.eq(pred_labels, labels)).item()
     # print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
@@ -372,9 +379,15 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric="eod"):
     return pred_labels, accuracy, local_fairness
 
 
-def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test", fairness_metric="eod"):
-    local_fairness_ls = []
+def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"]):
+    local_fairness_ls = {}
     local_acc_ls = []
+    if "eod" in fairness_metric:
+        local_fairness_ls["eod"] = []
+    if "tpr" in fairness_metric:
+        local_fairness_ls["tpr"] = []
+    if "fpr" in fairness_metric:
+        local_fairness_ls["fpr"] = []
 
     for i in range(num_users):
         if set == "test":
@@ -384,8 +397,13 @@ def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test"
 
         local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
         pred_labels, accuracy, local_fairness = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
-        local_fairness_ls.append(local_fairness)
         local_acc_ls.append(accuracy)
+        if "eod" in fairness_metric:
+            local_fairness_ls["eod"].append(local_fairness["eod"])
+        if "tpr" in fairness_metric:
+            local_fairness_ls["tpr"].append(local_fairness["tpr"])
+        if "fpr" in fairness_metric:
+            local_fairness_ls["fpr"].append(local_fairness["fpr"])
     
     return local_acc_ls, local_fairness_ls
 
