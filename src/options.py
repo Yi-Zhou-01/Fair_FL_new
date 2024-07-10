@@ -80,6 +80,8 @@ def args_parser():
     parser.add_argument('--local_test_ratio', type=float, default=0.2, help='Local test set ratio')
 
     parser.add_argument('--plot_tpfp', type=bool, default=False, help='Local test set ratio')
+
+    parser.add_argument('--fairfed_ep', type=int, default=20, help='Global training round for FairFed')
     
 
     args = parser.parse_args()

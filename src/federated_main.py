@@ -318,7 +318,8 @@ if __name__ == '__main__':
 
 
 
-            cost_constraint = args.post_proc_cost # "fpr" # "fnr", "fpr", "weighted"
+            # cost_constraint = args.post_proc_cost # "fpr" # "fnr", "fpr", "weighted"
+            cost_constraint = "fnr"
             randseed = 12345679 
 
             # Fit post-processing model
@@ -331,6 +332,7 @@ if __name__ == '__main__':
             cpp = EqOddsPostprocessing(privileged_groups = privileged_groups,
                                             unprivileged_groups = unprivileged_groups,
                                             seed=randseed)
+            
             cpp = cpp.fit(local_train_dataset.bld, train_bld_prediction_dataset)
 
             
@@ -347,6 +349,7 @@ if __name__ == '__main__':
             # train_acc_new.append(cm_pred_train_debiased.accuracy())
             # train_eod_new.append(cm_pred_train_debiased.equalized_odds_difference())
             stat_dic['train_acc_new'].append(cm_pred_train_debiased.accuracy())
+            # stat_dic['train_eod_new'].append(cm_pred_train_debiased.average_abs_odds_difference())
             stat_dic['train_eod_new'].append(cm_pred_train_debiased.equalized_odds_difference())
             if args.plot_tpfp:
                 stat_dic['train_tpr_new'].append(cm_pred_train_debiased.true_positive_rate_difference())
@@ -363,6 +366,7 @@ if __name__ == '__main__':
             # test_acc_new.append(cm_pred_test_debiased.accuracy())
             # test_eod_new.append(cm_pred_test_debiased.equalized_odds_difference())
             stat_dic['test_acc_new'].append(cm_pred_test_debiased.accuracy())
+            # stat_dic['test_eod_new'].append(cm_pred_test_debiased.average_abs_odds_difference())
             stat_dic['test_eod_new'].append(cm_pred_test_debiased.equalized_odds_difference())
             if args.plot_tpfp:
                 stat_dic['test_tpr_new'].append(cm_pred_test_debiased.true_positive_rate_difference())
@@ -412,7 +416,7 @@ if __name__ == '__main__':
 
         # For each (global) round of training
         local_weights_fair = []
-        for epoch in tqdm(range(args.epochs)):
+        for epoch in tqdm(range(args.fairfed_ep)):
             local_losses = []
             local_weights, local_losses = [], []
             print(f'\n | Global Training Round : {epoch+1} |\n')
@@ -572,9 +576,9 @@ if __name__ == '__main__':
         all_fl = all_fl + "new"
     if args.fl_fairfed:
         all_fl = all_fl + "fairfed"    
-    statistics_dir = os.getcwd() + '/save/statistics/{}/{}_{}_{}_ep{}_{}_frac{}_client{}_{}_part{}_beta{}'.\
-        format(args.idx, all_fl, args.dataset, args.model, args.epochs, args.local_ep, args.frac, args.num_users,
-               args.post_proc_cost, args.partition_idx, args.beta)    # <------------- iid tobeadded
+    statistics_dir = os.getcwd() + '/save/statistics/{}/{}_{}_{}_frac{}_client{}_{}_part{}_beta{}_ep{}_{}_{}'.\
+        format(args.idx, all_fl, args.dataset, args.model, args.frac, args.num_users,
+               args.post_proc_cost, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep)    # <------------- iid tobeadded
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)

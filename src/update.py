@@ -80,11 +80,15 @@ class LocalDataset(object):
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_ratio, stratify=y)
 
-        X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, stratify=y_test)
+        # X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, stratify=y_test)
 
         X_train[self.target_label] = y_train
         X_test[self.target_label] = y_test
-        X_val[self.target_label] = y_val
+    
+        # X_val[self.target_label] = y_val
+        X_val = X_test
+        # y_val = y_test
+
 
         # print("Local Train")
         # print(X_train[:5].index)
@@ -366,6 +370,7 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     local_fairness = {}
     if "eod" in metric:
         local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
+        # local_fairness["eod"] = (cm_pred_train.average_abs_odds_difference())
     if "tpr" in metric:
         local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
     if "fpr" in metric:
@@ -440,6 +445,7 @@ def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", 
 
     accuracy = cm_pred.accuracy()
     if metric == "eod":
+        # fairness = cm_pred.average_abs_odds_difference()
         fairness = cm_pred.equalized_odds_difference()
     
     return accuracy, fairness
