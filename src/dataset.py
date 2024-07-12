@@ -48,6 +48,7 @@ class AdultDataset(Dataset):
 
         self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
+        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
         self.X = self.standardlize_X(self.X)
         self.size = len(self.y)
@@ -58,11 +59,14 @@ class AdultDataset(Dataset):
     def __len__(self):
         return len(self.df)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
             idx = idx.tolist()
         # return [self.X.iloc[idx].values, self.y[idx]]
-        return [self.X[idx], self.y[idx]]
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
     
     def standardlize_X(self, X_data):
         # Define the columns to standardize

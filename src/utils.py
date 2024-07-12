@@ -111,6 +111,31 @@ def average_weights(w):
     return w_avg
 
 
+
+def get_fpr_diff(p, y, a):
+    fpr = torch.abs(torch.sum(p * (1 - y) * a) / (torch.sum(a) + 1e-5) 
+                    - torch.sum(p * (1 - y) * (1 - a)) / (torch.sum(1 - a) + 1e-5))
+    return fpr
+
+def get_tpr_diff(p, y, a):
+    tpr = torch.abs(torch.sum(p * y * a) / (torch.sum(a) + 1e-5) 
+                - torch.sum(p * y * (1 - a)) / (torch.sum(1 - a) + 1e-5))
+    
+    # fnr = torch.abs(torch.sum((1 - p) * y * a) / (torch.sum(a) + 1e-5) 
+    #                 - torch.sum((1 - p) * y * (1 - a)) / (torch.sum(1 - a) + 1e-5))
+
+    return tpr
+
+def equalized_odds_diff(p, y, a):
+    # return (get_fpr_diff(p, y, a)+get_tpr_diff(p, y, a))
+
+    return max(get_fpr_diff(p, y, a), get_tpr_diff(p, y, a))
+
+# max(np.abs(self.difference(self.false_positive_rate)), 
+#                         np.abs(self.difference(self.true_positive_rate)))
+
+
+
 def exp_details(args):
     print('\nExperimental details:')
     print(f'    Model     : {args.model}')

@@ -7,6 +7,8 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 import dataset
 import pandas as pd
+import torch.nn.functional as F
+import utils
 
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
@@ -23,29 +25,35 @@ class DatasetSplit(Dataset):
         self.dataset = dataset
         self.idxs = [int(i) for i in idxs]
 
+        # print(self.dataset[self.idxs[0]])
+
     def __len__(self):
         return len(self.idxs)
 
     def __getitem__(self, item):
-        image, label = self.dataset[self.idxs[item]]
-        return torch.tensor(image), torch.tensor(label)
+        # image, label = self.dataset[self.idxs[item]]
+        # image = self.dataset.X[self.idxs[item]]
+        # label = self.dataset.df[self.dataset.target][self.idxs[item]]
+        # s_attr = self.dataset[self.dataset.s_attr][self.idxs[item]]
+        image, label, s_attr = self.dataset[self.idxs[item]]
+        return torch.tensor(image), torch.tensor(label), torch.tensor(s_attr)
 
 
-class AdultDatasetWrapDf(Dataset):
-    """An abstract Dataset class wrapped around Pytorch Dataset class.
-    """
+# class AdultDatasetWrapDf(Dataset):
+#     """An abstract Dataset class wrapped around Pytorch Dataset class.
+#     """
 
-    def __init__(self, dataset_df):
-        self.dataset_df = dataset_df.reset_index(drop=True)
+#     def __init__(self, dataset_df):
+#         self.dataset_df = dataset_df.reset_index(drop=True)
 
-        # print(self.dataset_df[:5])
+#         # print(self.dataset_df[:5])
 
-    def __len__(self):
-        return len(self.dataset_df)
+#     def __len__(self):
+#         return len(self.dataset_df)
 
-    def __getitem__(self, idx):
-        image, label = self.dataset_df.drop('income', axis=1).iloc[idx], self.dataset_df['income'].iloc[idx]
-        return torch.tensor(image).to(torch.float32), torch.tensor(label).to(torch.float32)
+#     def __getitem__(self, idx):
+#         image, label = self.dataset_df.drop('income', axis=1).iloc[idx], self.dataset_df['income'].iloc[idx]
+#         return torch.tensor(image).to(torch.float32), torch.tensor(label).to(torch.float32)
 
 
 class LocalDataset(object):
@@ -106,6 +114,7 @@ class LocalUpdate(object):
         self.args = args
         self.logger = logger
         self.local_dataset = local_dataset
+        # self.ft = fine_tuning
 
         # self.trainloader, self.validloader, self.testloader = self.train_val_test(dataset, list(idxs))
         self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs)
@@ -126,50 +135,85 @@ class LocalUpdate(object):
                                 batch_size=int(len(test_idxs)/10), shuffle=False)
         
         return trainloader, validloader, testloader
+    
 
-
+    def update_final_layer(self, model,global_round):
+        model.train()
+        model.set_grad(False)
+        epoch_loss = []
+        optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=1e-2,
+                                        momentum=0.9, weight_decay=5e-4)
+        # if self.args.optimizer == 'sgd':
+        #     optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.lr,
+        #                                 momentum=0.5, weight_decay=1e-4)
+            
+        # elif self.args.optimizer == 'adam':
+        #     optimizer = torch.optim.Adam(model.final_layer.parameters(), lr=self.args.lr,
+        #                                 weight_decay=1e-4)
         
+        for iter in range(self.args.ft_ep):
+            batch_loss = []
+            batch_loss_fairness = []
+            batch_loss_1 = []
+            for batch_idx, (images, labels, a) in enumerate(self.trainloader):
+                images, labels = images.to(self.device), labels.to(self.device)
+                # model.zero_grad()
+                optimizer.zero_grad()  
 
-    def train_val_test(self, local_dataset, idxs):
-        """
-        Returns train, validation and test dataloaders for a given dataset
-        and user indexes.
-        """
+                # outputs = model.final_layer(model.get_features(images)) #.squeeze()
+                # log_softmax, softmax = F.log_softmax(outputs, dim=1), F.softmax(outputs, dim=1)
+                # loss = nn.NLLLoss()
+                # loss(log_softmax, labels.long())
+                # eod_loss = utils.equalized_odds_diff(softmax[:, -1], labels, a)
 
-        # trainloader = DataLoader(DatasetSplit(dataset, local_dataset.train_set_idxs),
-        #                          batch_size=self.args.local_bs, shuffle=True)
-        # validloader = DataLoader(DatasetSplit(dataset, local_dataset.val_set_idxs),
-        #                          batch_size=int(len(idxs_val)/10), shuffle=False)
-        # testloader = DataLoader(DatasetSplit(dataset, local_dataset.test_set_idxs),
-        #                         batch_size=int(len(idxs_test)/10), shuffle=False)
+                outputs = model.final_layer(model.get_features(images)).squeeze()
+                pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs]).view(-1)
+                eod_loss = utils.equalized_odds_diff(pred_labels, labels, a)
+                loss_1 = self.criterion(outputs, labels)
+                
+                # print("outputs: ", outputs.shape, outputs)
+                
+                # print("softmax: ", softmax.shape, softmax)
+                # print("log_softmax: ", log_softmax.shape, log_softmax)
+                # print("labels: ", labels.shape, labels)
+                # print("pred_labels: ", pred_labels)
+                
+                            
+                # print("outputs: ", outputs)
+                # print("softmax: ", softmax)
+                # print("pred_labels: ", pred_labels)
 
-        # -----------------------------------------
-        trainloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.train_set),
-                                 batch_size=self.args.local_bs, shuffle=True)
-        testloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.test_set),
-                                 batch_size=int(len(self.local_dataset.test_set)/10), shuffle=True)
-        validloader = DataLoader(AdultDatasetWrapDf(self.local_dataset.val_set),
-                                 batch_size=int(len(self.local_dataset.val_set)/10), shuffle=True)
+                
+                # loss = self.criterion(log_softmax, labels)
+                # loss_1 = nn.NLLLoss(weight=class_weights)(log_softmax, labels)
+                loss = loss_1*0.1 + self.args.ft_alpha * eod_loss
+                # loss = eod_loss
 
+                loss.backward(retain_graph=True)
+                optimizer.step()
 
-        # -----------------------------------------
+                # if self.args.verbose and (batch_idx % 10 == 0):
+                #     if batch_idx % 50 == 0 and (iter<10 or iter%10 ==0):
+                #     # if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
+                #         print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]  \tLoss: {:.6f} L1|EOD:  {:.6f} | {:.6f}'.format(
+                #             global_round, iter, batch_idx * len(images),
+                #             len(self.trainloader.dataset),
+                #             100. * batch_idx / len(self.trainloader), loss.item(), loss_1.item(), eod_loss.item()))
+                self.logger.add_scalar('loss', loss.item())
+                
+                # print('** Loss: {:.6f}  L1 - EOD:  {:.6f} | {:.6f}'.format(loss.item(), loss_1.item(), eod_loss.item()))
 
-        # # split indexes for train, validation, and test (80, 10, 10)
-        # idxs_train = idxs[:int(0.8*len(idxs))]
-        # idxs_val = idxs[int(0.8*len(idxs)):int(0.9*len(idxs))]
-        # idxs_test = idxs[int(0.9*len(idxs)):]
+                batch_loss_fairness.append(eod_loss.item())
+                batch_loss.append(loss.item())
+                batch_loss_1.append(loss_1.item())
 
-        # # print("++++++++++ Local dataset statistics +++++++++++++++++++")
-        # # target_ls = dataset.y
-        # # print("Train: ", )
+            print('| Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
+                    global_round, iter, sum(batch_loss), sum(batch_loss_1), sum(batch_loss_fairness)))
+    
+            epoch_loss.append(sum(batch_loss)/len(batch_loss))
 
-        # trainloader = DataLoader(DatasetSplit(dataset, idxs_train),
-        #                          batch_size=self.args.local_bs, shuffle=True)
-        # validloader = DataLoader(DatasetSplit(dataset, idxs_val),
-        #                          batch_size=int(len(idxs_val)/10), shuffle=False)
-        # testloader = DataLoader(DatasetSplit(dataset, idxs_test),
-        #                         batch_size=int(len(idxs_test)/10), shuffle=False)
-        return trainloader, validloader, testloader
+        return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
+
 
     def update_weights(self, model, global_round):
         # Set mode to train model
@@ -182,11 +226,11 @@ class LocalUpdate(object):
                                         momentum=0.5)
         elif self.args.optimizer == 'adam':
             optimizer = torch.optim.Adam(model.parameters(), lr=self.args.lr,
-                                         weight_decay=1e-4)
+                                        weight_decay=1e-4)
 
         for iter in range(self.args.local_ep):
             batch_loss = []
-            for batch_idx, (images, labels) in enumerate(self.trainloader):
+            for batch_idx, (images, labels, _) in enumerate(self.trainloader):
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 model.zero_grad()
@@ -218,7 +262,7 @@ class LocalUpdate(object):
         model.eval()
         loss, total, correct = 0.0, 0.0, 0.0
 
-        for batch_idx, (images, labels) in enumerate(self.validloader):
+        for batch_idx, (images, labels, _) in enumerate(self.validloader):
         # for batch_idx, (images, labels) in enumerate(self.testloader):
             images, labels = images.to(self.device), labels.to(self.device)
 
@@ -251,32 +295,6 @@ class LocalUpdate(object):
         # print("Inference pred labels: ", correct, "/", total, sum(labels))
         accuracy = correct/total
         return accuracy, loss
-    
-    # def fairness_eval_spd(self, set="train", target_label="income", s_attr="sex_1"):
-    #     privileged_groups = [{s_attr: 1}]
-    #     unprivileged_groups = [{s_attr: 0}]
-
-    #     # statistical_parity_difference of local train data
-    #     if set == "train":
-    #         subset_df = self.dataset.df[self.dataset.df.index.isin(self.train_idx)]
-    #     elif set == "test":
-    #         subset_df = self.dataset.df[self.dataset.df.index.isin(self.test_idx)]
-    #     dataset_bld = BinaryLabelDataset(df=subset_df, label_names=[target_label], protected_attribute_names=[s_attr])
-        
-    #     metric_orig_train = BinaryLabelDatasetMetric(dataset_bld, 
-    #                             unprivileged_groups=unprivileged_groups,
-    #                             privileged_groups=privileged_groups)
-        
-    #     print("Statistical parity difference= %f" % metric_orig_train.mean_difference())
-    #     # print("Difference in mean outcomes between unprivileged and privileged groups = %f" % metric_orig_train.mean_difference())
-    #     print("pass")
-    
-
-    # def fairness_eval_eod(self, model):
-
-
-    #     print("pass")
-
 
 def test_inference(args, model, test_dataset):
     """ Returns the test accuracy and loss.
@@ -291,7 +309,7 @@ def test_inference(args, model, test_dataset):
     testloader = DataLoader(test_dataset, batch_size=128,
                             shuffle=False)
 
-    for batch_idx, (images, labels) in enumerate(testloader):
+    for batch_idx, (images, labels, _) in enumerate(testloader):
         images, labels = images.to(device), labels.to(device)
 
         # Inference
@@ -326,7 +344,7 @@ def get_prediction(args, model, test_dataset):
     outputs = model(images).squeeze()
     pred_labels = [ int(pred >= 0.5) for pred in outputs]
   
-    pred_labels = pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+    pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
     pred_labels = pred_labels.view(-1)
     # print("Len of pred_labels set: ", len(pred_labels))
     # print(pred_labels)
@@ -351,9 +369,9 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     Y_tensor  = torch.tensor(test_dataset.y)
     images, labels = X_tensor.to(device), Y_tensor.to(device)
     outputs = model(images).squeeze()
-    pred_labels = [ int(pred >= 0.5) for pred in outputs]
+    # pred_labels = [ int(pred >= 0.5) for pred in outputs]
   
-    pred_labels = pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+    pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
     pred_labels = pred_labels.view(-1)
     # print("Len of pred_labels set: ", len(pred_labels))
     # print(pred_labels)

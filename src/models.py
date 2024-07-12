@@ -60,6 +60,42 @@ class MLPAdult(nn.Module):
         x = self.dropout(self.relu(self.layer_3(x)))
         network = self.layer_4(x)
         return network
+    
+
+
+
+class MLPAdult2(nn.Module):
+    def __init__(self, dim_in, dim_hidden, dim_out):
+        super(MLPAdult2, self).__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(in_features=32, out_features=64),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(in_features=64, out_features=128), 
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            # nn.Linear(in_features=128, out_features=64),
+            # nn.ReLU(),
+            # nn.Dropout(0.1),
+        )
+        self.final_layer = nn.Linear(in_features=128, out_features=1)
+
+    def forward(self, x):
+        x = self.mlp(x)
+        network = self.final_layer(x)
+
+        return network
+    
+    def get_features(self, x):
+        # if norm:
+        #     x = Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))(x)
+        features = self.mlp(x)
+        return features
+        # return F.reshape(features, (features.shape[0], -1))
+
+    def set_grad(self, val):
+        for param in self.mlp.parameters():
+            param.requires_grad = val
 
 
 class Plain_LR_Adult(nn.Module):
