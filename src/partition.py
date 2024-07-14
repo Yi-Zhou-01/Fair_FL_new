@@ -5,10 +5,10 @@ import random
 import argparse
 import csv
 import matplotlib.pyplot as plt
-from dataset import AdultDataset
+from dataset import AdultDataset, CompasDataset
 import json
 
-def adult_iid(dataset, num_clients):
+def iid_sampling(dataset, num_clients):
     """
     Sample I.I.D. client data from Adult dataset
     Equallly divide data samples into N groups based on its original order
@@ -27,7 +27,7 @@ def adult_iid(dataset, num_clients):
 
 
 
-def adult_dirichlet(dataset, num_clients, alpha,  attr="income", ratio=None):
+def dirichlet_sampling(dataset, num_clients, alpha, attr, ratio=None):
     """
     Sample Non-I.I.D. client data from Adult dataset
     Equallly divide data samples into N groups based on its original order
@@ -40,7 +40,7 @@ def adult_dirichlet(dataset, num_clients, alpha,  attr="income", ratio=None):
     """
 
     # if dirichlet:
-
+    # attr = dataset.target
     train_labels = dataset.df[attr].to_numpy().astype(np.float32)
     n_classes = len(set(train_labels))
 
@@ -70,13 +70,16 @@ def get_args():
     parser.add_argument('--n_clients', type=int, default=10,  help='number of workers in a distributed cluster')
     # parser.add_argument('--init_seed', type=int, default=0, help="Random seed")
     # "./data/adult/adult_all_33col_70train_0.csv"
-    parser.add_argument('--data_path', type=str, required=False, default="/data/adult/adult_all_33col.csv", help="Data directory")
-    parser.add_argument('--save_to_dir', type=str, required=False, default="/data/adult/partition/", help="Output directory")
+    # parser.add_argument('--data_path', type=str, required=False, default="/data/adult/adult_all_33col.csv", help="Data directory")
+    # parser.add_argument('--save_to_dir', type=str, required=False, default="/data/adult/partition/", help="Output directory")
     parser.add_argument('--partition_idx', type=str, required=False, default="0", help="Output directory")
     
     parser.add_argument('--alpha', type=float, default=0.5, help='The parameter for the dirichlet distribution for data partitioning')
     # parser.add_argument('--save_to', type=str, default='', help='The parameter for the dirichlet distribution for data partitioning')
-    parser.add_argument('--target_attr', type=str, default='education-num', help='The parameter for the dirichlet distribution for data partitioning')
+    parser.add_argument('--target_attr', type=str, default='income', help='Sampling based on target_attr')
+    
+    parser.add_argument('--dataset', type=str, default='adult', help='The dataset for partition')
+    
     args = parser.parse_args()
     return args
 
@@ -89,25 +92,32 @@ if __name__ == '__main__':
     
     args = get_args()
 
-    csv_file_train = os.getcwd()+args.data_path
+    
     # '/data/adult/adult_all_33col_70train_0.csv'
 
-    train_data = AdultDataset(csv_file_train)
-    labels = train_data.df[args.target_attr].to_numpy()
+    if args.dataset == "adult":
+        csv_file_train = os.getcwd()+"/data/adult/adult_all_33col.csv"
+        # save_to_dir = "/data/adult/partition/"
+        train_data = AdultDataset(csv_file_train)
+    elif args.dataset == "compas":
+        csv_file_train = os.getcwd()+"/data/compas/compas_encoded_all.csv"
+        train_data = CompasDataset(csv_file_train)
+
+    labels = train_data.y
     classes = list(set(labels))
     n_classes = len(classes)
 
     if args.partition == "diri":
-        client_idcs = adult_dirichlet(dataset=train_data, num_clients=args.n_clients, attr=args.target_attr, dirichlet=args.alpha, ratio=None)
+        client_idcs = dirichlet_sampling(dataset=train_data, num_clients=args.n_clients, attr=args.target_attr, alpha=args.alpha, ratio=None)
     elif args.partition == "iid":
-        client_idcs = adult_iid(dataset=train_data, num_clients=args.n_clients)
+        client_idcs = iid_sampling(dataset=train_data, num_clients=args.n_clients)
 
 
     print("client_idcs type: ", type(client_idcs))
 
     data_name = csv_file_train.split("/")[-1].split('.')[0]
     file_name = "user_groups_%dclients_%.1falpha_%s_%s_%s.npy" %(args.n_clients, args.alpha, args.partition, args.target_attr, data_name)
-    target_dir = os.getcwd() + args.save_to_dir + args.partition_idx 
+    target_dir = os.getcwd() + "/data/" + args.dataset + "/partition/" + args.partition_idx 
     os.makedirs(target_dir, exist_ok=True)
     save_to_file = target_dir + "/"  + file_name
     # json.dump(client_idcs, open(save_to_file,'w'))

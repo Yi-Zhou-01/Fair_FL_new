@@ -17,11 +17,7 @@ class AdultDataset(Dataset):
     """Students Performance dataset."""
 
     def __init__(self, csv_file, df=None, crop=None, subset=None):
-        """Initializes instance of class StudentsPerformanceDataset.
-
-        Args:
-            csv_file (str): Path to the csv file with the students data.
-
+        """Initializes instance of Adult dataset.
         """
 
         if df is not None:
@@ -34,17 +30,9 @@ class AdultDataset(Dataset):
         if subset:
             self.df = self.df[self.df.index.isin(subset)]
 
-        
         self.target = "income"
         self.s_attr = "sex_1"
         self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
-
-        # self.sensitive = ""
-
-        # self.X = self.df.drop(self.target, axis=1).astype(np.float32)
-        # self.y = self.df[self.target].astype(np.float32)
-        # self.train_labels = self.y
-        # self.length = len(self.df)
 
         self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
@@ -84,6 +72,50 @@ class AdultDataset(Dataset):
 
 
 
+class CompasDataset(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, df=None, crop=None, subset=None):
+        """Initializes instance of class Compas Dataset.
+        """
+
+        if df is not None:
+            self.df = df
+        else:
+            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+        if crop:
+            self.df = self.df[:crop]
+
+        if subset:
+            self.df = self.df[self.df.index.isin(subset)]
+        
+        self.target = "two_year_recid"
+        self.s_attr = "sex"
+        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+        self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.y = self.df[self.target].to_numpy().astype(np.float32)
+        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+
+        # self.X = self.standardlize_X(self.X)
+        self.size = len(self.y)
+
+        # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
+        # y = torch.from_numpy(y).type(torch.float)
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+        # return [self.X.iloc[idx].values, self.y[idx]]
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
+    
+
 def get_bld_dataset_w_pred(test_dataset, prediction_test):
     new_df = test_dataset.df.copy(deep=True)
     new_df[test_dataset.target] = prediction_test
@@ -95,8 +127,8 @@ def get_bld_dataset_w_pred(test_dataset, prediction_test):
 #         csv_file_val =  os.getcwd()+'/data/adult/adult_dummy.csv'
 #         train_dataset = AdultDataset(csv_file_train)
 
-def get_partition(p_idx):
-    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/adult/partition/' + str(p_idx)
+def get_partition(p_idx, dataset="adult"):
+    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + 'adult/partition/' + str(p_idx)
     file_ls = os.listdir(path_root)
     partition_file_ls = [file for file in file_ls if '.npy' in file]
     partition_file = path_root + '/' + partition_file_ls[0]
@@ -123,32 +155,19 @@ def get_dataset(args):
         csv_file_test =  os.getcwd()+'/data/adult/adult_all_33col_20test_0.csv'
         csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
 
-
-        # print("csv_file_train")
-        # print(csv_file_train)
-
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
-        partition_file = get_partition(args.partition_idx)
+        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
+    
+    elif args.dataset == 'compas':
 
-   
-        # if args.iid:
-        #     # Sample IID user data from Mnist
-        #     train_dataset = AdultDataset(csv_file_train)
-        #     user_groups = adult_iid(train_dataset, args.num_users)
-        # else:
-        #     # Sample Non-IID user data from Mnist
-        #     if args.unequal:
-        #         # Chose uneuqal splits for every user
-        #         raise NotImplementedError()
-        #     else:
-        #         crop = 35600
-        #         train_dataset = AdultDataset(csv_file_train, crop)
-        #         # Chose euqal splits for every user
-        #         # user_groups = adult_noniid(train_dataset, args.num_users)
-        #         partition_file = os.getcwd() + "/data/adult/partition/user_groups_10clients_0alpha_diri_income_adult_all_33col_70train_0.npy" 
-        #         user_groups = sampling.adult_noniid_new(train_dataset, args.num_users, partition_file)
+        csv_file_train = os.getcwd()+'/data/compas/compas_encoded_all.csv'
+
+        train_dataset = CompasDataset(csv_file_train)
+        test_dataset = None
+        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
 
 
     # elif args.dataset == 'cifar':
@@ -208,11 +227,11 @@ def get_dataset(args):
     return train_dataset, test_dataset, user_groups
 
 
-def get_val_dataset(args):
-    if  args.dataset == 'adult':
+# def get_val_dataset(args):
+#     if  args.dataset == 'adult':
 
-        csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
-        val_dataset = AdultDataset(csv_file_val)
+#         csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
+#         val_dataset = AdultDataset(csv_file_val)
 
-        return val_dataset
+#         return val_dataset
 
