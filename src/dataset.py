@@ -120,7 +120,7 @@ def get_bld_dataset_w_pred(test_dataset, prediction_test):
     new_df = test_dataset.df.copy(deep=True)
     new_df[test_dataset.target] = prediction_test
     # print("Check sum prediction equal: ", sum(prediction_test), sum(new_df[test_dataset.target]))
-    return BinaryLabelDataset(df=new_df, label_names=[test_dataset.target], protected_attribute_names=['sex_1'])
+    return BinaryLabelDataset(df=new_df, label_names=[test_dataset.target], protected_attribute_names=[test_dataset.s_attr])
 
 
 # def df_to_dataset(df, dataset_name="adult"):
@@ -128,7 +128,7 @@ def get_bld_dataset_w_pred(test_dataset, prediction_test):
 #         train_dataset = AdultDataset(csv_file_train)
 
 def get_partition(p_idx, dataset="adult"):
-    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + 'adult/partition/' + str(p_idx)
+    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
     file_ls = os.listdir(path_root)
     partition_file_ls = [file for file in file_ls if '.npy' in file]
     partition_file = path_root + '/' + partition_file_ls[0]
@@ -165,7 +165,7 @@ def get_dataset(args):
         csv_file_train = os.getcwd()+'/data/compas/compas_encoded_all.csv'
 
         train_dataset = CompasDataset(csv_file_train)
-        test_dataset = None
+        test_dataset = CompasDataset(csv_file_train) # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
@@ -227,11 +227,11 @@ def get_dataset(args):
     return train_dataset, test_dataset, user_groups
 
 
-# def get_val_dataset(args):
-#     if  args.dataset == 'adult':
+def get_dataset_from_df(dataset_name, df):
+    """ Returns Dataset object
+    """
 
-#         csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
-#         val_dataset = AdultDataset(csv_file_val)
-
-#         return val_dataset
-
+    if  dataset_name == 'adult':
+        return AdultDataset(csv_file="", df=df)
+    elif  dataset_name == 'compas':
+        return CompasDataset(csv_file="", df=df)

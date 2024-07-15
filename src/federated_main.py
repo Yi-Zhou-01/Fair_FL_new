@@ -21,7 +21,7 @@ import dataset
 
 # from options import args_parser
 from update import LocalUpdate, test_inference
-from models import MLP, MLPAdult, CNNMnist, CNNFashion_Mnist, CNNCifar, Plain_LR_Adult, MLPAdult2
+from models import MLP, MLPAdult, CNNMnist, CNNFashion_Mnist, CNNCifar, Plain_LR_Adult, MLPAdult2, MLPCompas
 from utils import average_weights, exp_details
 import os
 import update
@@ -87,6 +87,16 @@ if __name__ == '__main__':
                 # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
                 #                 dim_out=args.num_classes)
                 global_model = MLPAdult2(dim_in=len_in, dim_hidden=64,
+                                dim_out=args.num_classes)
+        
+        elif args.dataset == 'compas':
+            img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
+                #                 dim_out=args.num_classes)
+                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
                                 dim_out=args.num_classes)
         else:
             img_size = train_dataset[0][0].shape
@@ -215,9 +225,9 @@ if __name__ == '__main__':
         
         
         if args.plot_tpfp:
-            acc_test, fairness_test = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+            acc_test, fairness_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
                                                            args.gpu, set="test", fairness_metric=["eod","tpr","fpr"])
-            acc_train, fairness_train = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+            acc_train, fairness_train = update.get_all_local_metrics(args.dataset,args.num_users, global_model, local_set_ls,
                                                             args.gpu, set="train", fairness_metric=["eod","tpr","fpr"])
             stat_dic["test_acc_fedavg"] = acc_test
             stat_dic["train_acc_fedavg"] = acc_train
@@ -228,9 +238,9 @@ if __name__ == '__main__':
             stat_dic["test_fpr_fedavg"] = fairness_test["fpr"]
             stat_dic["train_fpr_fedavg"] = fairness_train["fpr"]
         else:
-            acc_test, fairness_test = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+            acc_test, fairness_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
                                                            args.gpu, set="test", fairness_metric=["eod"])
-            acc_train, fairness_train = update.get_all_local_metrics(args.num_users, global_model, local_set_ls,
+            acc_train, fairness_train = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
                                                             args.gpu, set="train", fairness_metric=["eod"])
             stat_dic["test_acc_fedavg"] = acc_test
             stat_dic["test_eod_fedavg"] = fairness_test["eod"]
@@ -297,11 +307,13 @@ if __name__ == '__main__':
 
                 # Post-processing with local dataset
                 # train_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_train)]
-                local_train_dataset =  dataset.AdultDataset(csv_file="", df=train_set_df)
+
+                local_train_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=train_set_df)
+                local_test_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=test_set_df)
+              
                 local_train_prediction, local_train_acc = update.get_prediction(args, global_model, local_train_dataset)
                 train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
                 
-                local_test_dataset =  dataset.AdultDataset(csv_file="", df=test_set_df)
                 local_test_prediction, local_acc = update.get_prediction(args, global_model, local_test_dataset)
                 local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
 
@@ -372,7 +384,7 @@ if __name__ == '__main__':
             stat_dic['train_eod_new_ft'] = []
             stat_dic['train_tpr_new_ft'] = []
             stat_dic['train_fpr_new_ft'] = []
-            
+
             for c in range(args.num_users):
                 local_dataset = local_set_ls[c]
                 split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
@@ -386,8 +398,8 @@ if __name__ == '__main__':
                 local_train_model.load_state_dict(weights)
 
                 # Test acc & fairness
-                local_dataset_test =  dataset.AdultDataset(csv_file="", df=local_set_ls[i].test_set) 
-                local_dataset_train =  dataset.AdultDataset(csv_file="", df=local_set_ls[i].train_set) 
+                local_dataset_test = dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].test_set) 
+                local_dataset_train =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].train_set) 
 
                 fairness_metric = ["eod", "tpr", "fpr"]
                 pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, local_train_model, local_dataset_test, fairness_metric)
@@ -452,7 +464,7 @@ if __name__ == '__main__':
             prediction_ls = []
             for i in range(args.num_users):
                 local_set_df = local_set_ls[i].train_set
-                local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+                local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
                 pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
                 local_fairness_ls.append(local_fairness["eod"])
                 prediction_ls.append(pred_labels)
@@ -564,7 +576,7 @@ if __name__ == '__main__':
         local_acc_ls = []
         for i in range(args.num_users):
             local_set_df = local_set_ls[i].train_set
-            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+            local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
             pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
             local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
@@ -582,7 +594,7 @@ if __name__ == '__main__':
         local_acc_ls = []
         for i in range(args.num_users):
             local_set_df = local_set_ls[i].test_set
-            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+            local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
             pred_labels, accuracy, local_fairness = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
             local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
@@ -609,8 +621,8 @@ if __name__ == '__main__':
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
     print(stat_dic)
-    for key in stat_dic.keys():
-        print(key, len(stat_dic[key]))
+    # for key in stat_dic.keys():
+    #     print(key, len(stat_dic[key]))
     # print(stat_dic.shape)
     stat_df = pd.DataFrame(stat_dic)
     stat_df.to_csv(statistics_dir + "/stats.csv")

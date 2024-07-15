@@ -141,7 +141,11 @@ class LocalUpdate(object):
         model.train()
         model.set_grad(False)
         epoch_loss = []
-        optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=1e-2,
+        # hyperparameter for 100% fairness
+        # optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=1e-2,
+                                        # momentum=0.9, weight_decay=5e-4)
+
+        optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=5e-3,
                                         momentum=0.9, weight_decay=5e-4)
         # if self.args.optimizer == 'sgd':
         #     optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.lr,
@@ -186,7 +190,8 @@ class LocalUpdate(object):
                 
                 # loss = self.criterion(log_softmax, labels)
                 # loss_1 = nn.NLLLoss(weight=class_weights)(log_softmax, labels)
-                loss = loss_1*0.1 + self.args.ft_alpha * eod_loss
+                # loss = loss_1*0.005 + self.args.ft_alpha * eod_loss
+                loss = loss_1 + self.args.ft_alpha * eod_loss
                 # loss = eod_loss
 
                 loss.backward(retain_graph=True)
@@ -402,7 +407,7 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     return pred_labels, accuracy, local_fairness
 
 
-def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"]):
+def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"]):
     local_fairness_ls = {}
     local_acc_ls = []
     if "eod" in fairness_metric:
@@ -418,7 +423,11 @@ def get_all_local_metrics(num_users, global_model, local_set_ls, gpu, set="test"
         elif set == "train":
             local_set_df = local_set_ls[i].train_set
 
-        local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+        if datasetname == "adult":
+            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+        elif datasetname == "compas":
+            local_dataset =  dataset.CompasDataset(csv_file="", df=local_set_df)
+
         pred_labels, accuracy, local_fairness = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
         local_acc_ls.append(accuracy)
         if "eod" in fairness_metric:
