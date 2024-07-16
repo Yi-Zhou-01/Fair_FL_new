@@ -372,6 +372,7 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
 
     X_tensor = torch.tensor(test_dataset.X)
     Y_tensor  = torch.tensor(test_dataset.y)
+    s_attr_ls = list(test_dataset.df[test_dataset.s_attr])
     images, labels = X_tensor.to(device), Y_tensor.to(device)
     outputs = model(images).squeeze()
     # pred_labels = [ int(pred >= 0.5) for pred in outputs]
@@ -404,12 +405,15 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     # print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
     # accuracy = correct/len(pred_labels)
 
-    return pred_labels, accuracy, local_fairness
+    return pred_labels, accuracy, local_fairness, labels, s_attr_ls
 
 
-def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"]):
+def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"], return_label=False):
     local_fairness_ls = {}
     local_acc_ls = []
+    labels_ls = []
+    s_attr_ls = []
+    pred_labels_ls=[]
     if "eod" in fairness_metric:
         local_fairness_ls["eod"] = []
     if "tpr" in fairness_metric:
@@ -427,9 +431,16 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
             local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
         elif datasetname == "compas":
             local_dataset =  dataset.CompasDataset(csv_file="", df=local_set_df)
+        elif datasetname == "wcld":
+            local_dataset =  dataset.WCLDDataset(csv_file="", df=local_set_df)
 
-        pred_labels, accuracy, local_fairness = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
+
+        pred_labels, accuracy, local_fairness, labels, s_attr = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
         local_acc_ls.append(accuracy)
+        if return_label:
+            pred_labels_ls.append(pred_labels)
+            labels_ls.append(labels)
+            s_attr_ls.append(torch.tensor(s_attr))
         if "eod" in fairness_metric:
             local_fairness_ls["eod"].append(local_fairness["eod"])
         if "tpr" in fairness_metric:
@@ -437,7 +448,10 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
         if "fpr" in fairness_metric:
             local_fairness_ls["fpr"].append(local_fairness["fpr"])
     
-    return local_acc_ls, local_fairness_ls
+    if return_label:
+        return local_acc_ls, local_fairness_ls, pred_labels_ls, labels_ls, s_attr_ls
+    else:
+        return local_acc_ls, local_fairness_ls
 
 
 def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", set="train"):

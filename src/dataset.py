@@ -13,6 +13,8 @@ import sampling
 from sklearn.preprocessing import StandardScaler
 from aif360.datasets import BinaryLabelDataset
 
+import h5py
+
 class AdultDataset(Dataset):
     """Students Performance dataset."""
 
@@ -97,6 +99,89 @@ class CompasDataset(Dataset):
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
+        self.size = len(self.y)
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+        # return [self.X.iloc[idx].values, self.y[idx]]
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
+
+
+
+class WCLDDataset(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, df=None, crop=None, subset=None):
+        """Initializes instance of class Compas Dataset.
+        """
+
+        if df is not None:
+            self.df = df
+        else:
+            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+        if crop:
+            self.df = self.df[:crop]
+
+        if subset:
+            self.df = self.df[self.df.index.isin(subset)]
+        
+        self.target = "recid_180d"
+        self.s_attr = "sex"
+        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+        self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.y = self.df[self.target].to_numpy().astype(np.float32)
+        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+
+        self.size = len(self.y)
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+        # return [self.X.iloc[idx].values, self.y[idx]]
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
+
+class PTBDataset(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, traces, df=None, crop=None, subset=None):
+        """Initializes instance of class Compas Dataset.
+        """
+
+        if df is not None:
+            self.df = df
+        else:
+            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            columns = ["record_id", "ecg_id","patient_id","age","sex", "filename_lr","filename_hr","NORM"]
+            self.df = self.df.loc[:, df.columns.isin(columns)]
+        if crop:
+            self.df = self.df[:crop]
+
+        if subset:
+            self.df = self.df[self.df.index.isin(subset)]
+        
+        self.target = "NORM"
+        self.s_attr = "sex"
+        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.X = list(self.df.index)
+        self.y = self.df[self.target].to_numpy().astype(np.float32)
+        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+
         # self.X = self.standardlize_X(self.X)
         self.size = len(self.y)
 
@@ -110,11 +195,12 @@ class CompasDataset(Dataset):
         if isinstance(idx, torch.Tensor):
             idx = idx.tolist()
         # return [self.X.iloc[idx].values, self.y[idx]]
+
         if s_att:
-            return [self.X[idx], self.y[idx], self.a[idx]]
+            return [traces[idx], self.y[idx], self.a[idx]]
         else:
-            return [self.X[idx], self.y[idx]]
-    
+            return [traces[idx], self.y[idx]]
+
 
 def get_bld_dataset_w_pred(test_dataset, prediction_test):
     new_df = test_dataset.df.copy(deep=True)
@@ -165,10 +251,18 @@ def get_dataset(args):
         csv_file_train = os.getcwd()+'/data/compas/compas_encoded_all.csv'
 
         train_dataset = CompasDataset(csv_file_train)
-        test_dataset = CompasDataset(csv_file_train) # Dummy test dataset: Not used for testing
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
+    elif args.dataset == 'wcld':
+
+        csv_file_train = os.getcwd()+'/data/wcld/wcld_60000.csv'
+
+        train_dataset = WCLDDataset(csv_file_train)
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
+        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
 
     # elif args.dataset == 'cifar':
     #     data_dir = '../data/cifar/'
@@ -235,3 +329,5 @@ def get_dataset_from_df(dataset_name, df):
         return AdultDataset(csv_file="", df=df)
     elif  dataset_name == 'compas':
         return CompasDataset(csv_file="", df=df)
+    elif  dataset_name == 'wcld':
+        return WCLDDataset(csv_file="", df=df)

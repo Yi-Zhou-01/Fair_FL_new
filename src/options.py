@@ -89,6 +89,9 @@ def args_parser():
     
     parser.add_argument('--ft_ep', type=int, default=5, help='Final layer fine-tuning epochs')
     
+    parser.add_argument('--local_split', type=str, default="", help='File path if use saved local client train/test split; Empty if want a newly generated one.')
+    
+
     args = parser.parse_args()
     return args
 

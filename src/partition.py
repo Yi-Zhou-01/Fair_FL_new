@@ -5,7 +5,7 @@ import random
 import argparse
 import csv
 import matplotlib.pyplot as plt
-from dataset import AdultDataset, CompasDataset
+from dataset import AdultDataset, CompasDataset, WCLDDataset
 import json
 
 def iid_sampling(dataset, num_clients):
@@ -102,6 +102,9 @@ if __name__ == '__main__':
     elif args.dataset == "compas":
         csv_file_train = os.getcwd()+"/data/compas/compas_encoded_all.csv"
         train_data = CompasDataset(csv_file_train)
+    elif args.dataset == "wcld":
+        csv_file_train = os.getcwd()+"/data/wcld/wcld_60000.csv"
+        train_data = WCLDDataset(csv_file_train)
 
     labels = train_data.y
     classes = list(set(labels))
