@@ -1,0 +1,100 @@
+******** Client #1 ********
+           Test (%)   -   Train (%)
+#Samples:  261        -    1042
+YA_11:     75 (29%)     309 (30%)
+YA_00:     34 (13%)     163 (16%)
+YA_10:     12 (5%)      38 (4%)
+YA_01:     140 (54%)     532 (51%)
+-
+flip_01_p:  0, Y=1: 0
+flip_01_up: 0, Y=1: 0
+flip_10_p:  9, Y=0: 3
+flip_10_up: 0, Y=0: 0
+-
+Before post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     19/75 (25%)     86/309 (28%)
+TPR  unp:   5/12 (42%)     7/38 (18%)
+TPR Diff         (16%)          (-9%)
+-
+After post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     13/75 (17%)     62/309 (20%)
+TPR  unp:   5/12 (42%)     7/38 (18%)
+TPR Diff         (24%)          (-2%)
+-
+******** Client #2 ********
+           Test (%)   -   Train (%)
+#Samples:  361        -    1444
+YA_11:     166 (46%)     666 (46%)
+YA_00:     36 (10%)     130 (9%)
+YA_10:     26 (7%)      102 (7%)
+YA_01:     133 (37%)     546 (38%)
+-
+flip_01_p:  0, Y=1: 0
+flip_01_up: 0, Y=1: 0
+flip_10_p:  12, Y=0: 1
+flip_10_up: 0, Y=0: 0
+-
+Before post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     48/166 (29%)     148/666 (22%)
+TPR  unp:   4/26 (15%)     16/102 (16%)
+TPR Diff         (-14%)          (-7%)
+-
+After post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     37/166 (22%)     111/666 (17%)
+TPR  unp:   4/26 (15%)     17/102 (17%)
+TPR Diff         (-7%)          (0%)
+-
+******** Client #3 ********
+           Test (%)   -   Train (%)
+#Samples:  370        -    1476
+YA_11:     153 (41%)     615 (42%)
+YA_00:     46 (12%)     190 (13%)
+YA_10:     29 (8%)      112 (8%)
+YA_01:     142 (38%)     559 (38%)
+-
+flip_01_p:  0, Y=1: 0
+flip_01_up: 0, Y=1: 0
+flip_10_p:  25, Y=0: 6
+flip_10_up: 0, Y=0: 0
+-
+Before post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     38/153 (25%)     153/615 (25%)
+TPR  unp:   7/29 (24%)     13/112 (12%)
+TPR Diff         (-1%)          (-13%)
+-
+After post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     19/153 (12%)     72/615 (12%)
+TPR  unp:   7/29 (24%)     13/112 (12%)
+TPR Diff         (12%)          (-0%)
+-
+******** Client #4 ********
+           Test (%)   -   Train (%)
+#Samples:  244        -    974
+YA_11:     87 (36%)     325 (33%)
+YA_00:     29 (12%)     134 (14%)
+YA_10:     14 (6%)      80 (8%)
+YA_01:     114 (47%)     435 (45%)
+-
+flip_01_p:  0, Y=1: 0
+flip_01_up: 0, Y=1: 0
+flip_10_p:  0, Y=0: 0
+flip_10_up: 0, Y=0: 0
+-
+Before post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     23/87 (26%)     85/325 (26%)
+TPR  unp:   1/14 (7%)     19/80 (24%)
+TPR Diff         (-19%)          (-2%)
+-
+After post-processing ...
+             Test (%)    -    Train (%)
+TPR  p:     23/87 (26%)     83/325 (26%)
+TPR  unp:   1/14 (7%)     20/80 (25%)
+TPR Diff         (-19%)          (-1%)
+-
