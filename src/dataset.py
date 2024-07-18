@@ -157,7 +157,7 @@ class WCLDDataset(Dataset):
 class PTBDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, traces, df=None, crop=None, subset=None):
+    def __init__(self, csv_file, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
 
@@ -165,8 +165,9 @@ class PTBDataset(Dataset):
             self.df = df
         else:
             self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
-            columns = ["record_id", "ecg_id","patient_id","age","sex", "filename_lr","filename_hr","NORM"]
-            self.df = self.df.loc[:, df.columns.isin(columns)]
+            # print("self.df: ", self.df[:5])
+            columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM"]
+            self.df = self.df.loc[:, self.df.columns.isin(columns)]
         if crop:
             self.df = self.df[:crop]
 
@@ -178,7 +179,13 @@ class PTBDataset(Dataset):
         self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
 
         # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-        self.X = list(self.df.index)
+        if traces:
+            path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+            f = h5py.File(path_to_traces, 'r')
+            self.X = np.array(f["tracings"][:]) 
+        else:
+            self.X = self.df["record_id"].to_numpy().astype(np.float32)
+
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
@@ -197,9 +204,9 @@ class PTBDataset(Dataset):
         # return [self.X.iloc[idx].values, self.y[idx]]
 
         if s_att:
-            return [traces[idx], self.y[idx], self.a[idx]]
+            return [self.X[idx], self.y[idx], self.a[idx]]
         else:
-            return [traces[idx], self.y[idx]]
+            return [self.X[idx], self.y[idx]]
 
 
 def get_bld_dataset_w_pred(test_dataset, prediction_test):
@@ -260,6 +267,15 @@ def get_dataset(args):
         csv_file_train = os.getcwd()+'/data/wcld/wcld_60000.csv'
 
         train_dataset = WCLDDataset(csv_file_train)
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
+        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
+    
+    elif args.dataset == 'ptb-xl':
+
+        csv_file_train = os.getcwd()+'/data/ptb-xl/ptbxl_all_clean_new.csv'
+
+        train_dataset = PTBDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
@@ -331,3 +347,5 @@ def get_dataset_from_df(dataset_name, df):
         return CompasDataset(csv_file="", df=df)
     elif  dataset_name == 'wcld':
         return WCLDDataset(csv_file="", df=df)
+    elif  dataset_name == 'ptb-xl':
+        return PTBDataset(csv_file="", df=df)

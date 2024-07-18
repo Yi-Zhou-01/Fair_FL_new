@@ -5,7 +5,7 @@ import random
 import argparse
 import csv
 import matplotlib.pyplot as plt
-from dataset import AdultDataset, CompasDataset, WCLDDataset
+from dataset import AdultDataset, CompasDataset, WCLDDataset, PTBDataset
 import json
 
 def iid_sampling(dataset, num_clients):
@@ -76,7 +76,7 @@ def get_args():
     
     parser.add_argument('--alpha', type=float, default=0.5, help='The parameter for the dirichlet distribution for data partitioning')
     # parser.add_argument('--save_to', type=str, default='', help='The parameter for the dirichlet distribution for data partitioning')
-    parser.add_argument('--target_attr', type=str, default='income', help='Sampling based on target_attr')
+    parser.add_argument('--target_attr', type=str, default=None, help='Sampling based on target_attr')
     
     parser.add_argument('--dataset', type=str, default='adult', help='The dataset for partition')
     
@@ -97,21 +97,33 @@ if __name__ == '__main__':
 
     if args.dataset == "adult":
         csv_file_train = os.getcwd()+"/data/adult/adult_all_33col.csv"
+        target_attr = "income"
         # save_to_dir = "/data/adult/partition/"
         train_data = AdultDataset(csv_file_train)
     elif args.dataset == "compas":
         csv_file_train = os.getcwd()+"/data/compas/compas_encoded_all.csv"
+        target_attr = "two_year_recid"
         train_data = CompasDataset(csv_file_train)
     elif args.dataset == "wcld":
         csv_file_train = os.getcwd()+"/data/wcld/wcld_60000.csv"
         train_data = WCLDDataset(csv_file_train)
+        target_attr = "recid_180d"
+    elif args.dataset == "ptb-xl":
+        csv_file_train = os.getcwd()+"/data/ptb-xl/ptbxl_all_clean_new.csv"
+        train_data = PTBDataset(csv_file_train, traces=False)
+        target_attr = "NORM"
+        print("Read from ptb-xl!")
+    else:
+        print("ERROR: Dataset not found!")
 
+    if args.target_attr:
+        target_attr = args.target_attr
     labels = train_data.y
     classes = list(set(labels))
     n_classes = len(classes)
 
     if args.partition == "diri":
-        client_idcs = dirichlet_sampling(dataset=train_data, num_clients=args.n_clients, attr=args.target_attr, alpha=args.alpha, ratio=None)
+        client_idcs = dirichlet_sampling(dataset=train_data, num_clients=args.n_clients, attr=target_attr, alpha=args.alpha, ratio=None)
     elif args.partition == "iid":
         client_idcs = iid_sampling(dataset=train_data, num_clients=args.n_clients)
 

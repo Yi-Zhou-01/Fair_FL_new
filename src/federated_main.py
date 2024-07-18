@@ -28,6 +28,7 @@ import update
 import plot
 import pickle
 import utils
+import models
 
 
 from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
@@ -74,7 +75,23 @@ if __name__ == '__main__':
 
 
     # BUILD MODEL
-    if args.model == 'cnn':
+    if args.dataset == 'ptb-xl':
+        N_LEADS = 12  # the 12 leads
+        N_CLASSES = 1  # just the age
+        seq_length = 1000
+        # net_filter_size=[64, 128, 196, 256, 320]
+        # net_seq_lengh=[4096, 1024, 256, 64, 16]
+        net_filter_size=[32, 64, 128, 196, 256]
+        net_seq_lengh=[1000, 500, 250, 125, 25]
+        dropout_rate=0.8
+        kernel_size=17
+        global_model = models.ResNetPTB(input_dim=(N_LEADS, seq_length),
+                        blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+                        n_classes=N_CLASSES,
+                        kernel_size=kernel_size,
+                        dropout_rate=dropout_rate)
+        
+    elif args.model == 'cnn':
         # Convolutional neural netork
         if args.dataset == 'mnist':
             global_model = CNNMnist(args=args)
@@ -327,6 +344,7 @@ if __name__ == '__main__':
         # Post-processing approach
         if "pp" in args.debias:
             # Apply post-processing locally at each client:
+            print("******** Start post-processing ******** ")
             pred_train_dic['pred_labels_pp'] = []
             pred_test_dic['pred_labels_pp'] = []
             for idx in range(args.num_users):
@@ -406,6 +424,7 @@ if __name__ == '__main__':
         # Apply final-layer fine-tuning
         if "ft" in args.debias:
             
+            print("******** Final layer fine-tuning ******** ")
             stat_dic['test_acc_new_ft'] = []
             stat_dic['test_eod_new_ft'] = []
             stat_dic['test_tpr_new_ft'] = []
@@ -658,8 +677,8 @@ if __name__ == '__main__':
     stat_df = pd.DataFrame(stat_dic)
     stat_df.to_csv(statistics_dir + "/stats.csv")
 
-    with open(statistics_dir+'/client_datasets.pkl', 'wb') as outp:
-        pickle.dump(local_set_ls, outp, pickle.HIGHEST_PROTOCOL)
+    # with open(statistics_dir+'/client_datasets.pkl', 'wb') as outp:
+    #     pickle.dump(local_set_ls, outp, pickle.HIGHEST_PROTOCOL)
     
     with open(statistics_dir+'/pred_train_dic.pkl', 'wb') as outp:
         pickle.dump(pred_train_dic, outp, pickle.HIGHEST_PROTOCOL)

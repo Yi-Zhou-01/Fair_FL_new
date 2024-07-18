@@ -15,6 +15,7 @@ from aif360.metrics import ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
 
 from sklearn.model_selection import train_test_split
+import numpy as np
 
 
 class DatasetSplit(Dataset):
@@ -54,6 +55,51 @@ class DatasetSplit(Dataset):
 #     def __getitem__(self, idx):
 #         image, label = self.dataset_df.drop('income', axis=1).iloc[idx], self.dataset_df['income'].iloc[idx]
 #         return torch.tensor(image).to(torch.float32), torch.tensor(label).to(torch.float32)
+
+
+
+class BatchDataloader:
+    def __init__(self, *tensors, bs=1, mask=None):
+        nonzero_idx, = np.nonzero(mask)
+        self.tensors = tensors
+        self.batch_size = bs
+        self.mask = mask
+        if nonzero_idx.size > 0:
+            self.start_idx = min(nonzero_idx)
+            self.end_idx = max(nonzero_idx)+1
+        else:
+            self.start_idx = 0
+            self.end_idx = 0
+
+    def __next__(self):
+        if self.start == self.end_idx:
+            raise StopIteration
+        end = min(self.start + self.batch_size, self.end_idx)
+        batch_mask = self.mask[self.start:end]
+        while sum(batch_mask) == 0:
+            self.start = end
+            end = min(self.start + self.batch_size, self.end_idx)
+            batch_mask = self.mask[self.start:end]
+        batch = [np.array(t[self.start:end]) for t in self.tensors]
+        self.start = end
+        self.sum += sum(batch_mask)
+        return [torch.tensor(b[batch_mask], dtype=torch.float32) for b in batch]
+
+    def __iter__(self):
+        self.start = self.start_idx
+        self.sum = 0
+        return self
+
+    def __len__(self):
+        count = 0
+        start = self.start_idx
+        while start != self.end_idx:
+            end = min(start + self.batch_size, self.end_idx)
+            batch_mask = self.mask[start:end]
+            if sum(batch_mask) != 0:
+                count += 1
+            start = end
+        return count
 
 
 class LocalDataset(object):
@@ -108,6 +154,13 @@ class LocalDataset(object):
 
 
 
+def get_mask_from_idx(data_size, train_idxs):
+
+    mask = np.zeros(data_size, dtype=np.int8)
+    for idx in train_idxs:
+        mask[idx] = 1
+    return mask
+
 
 class LocalUpdate(object):
     def __init__(self, args, split_idxs, dataset, idxs, logger,local_dataset=None):
@@ -124,13 +177,24 @@ class LocalUpdate(object):
         self.criterion = torch.nn.BCEWithLogitsLoss().to(self.device)
         self.dataset = dataset
     
+   
     def split_w_idxs(self, dataset, idxs):
         train_idxs, test_idxs, val_idxs = idxs
 
+        # if self.args.dataset == "ptb-xl":
+        #     data_size = dataset.size
+        #     train_mask = get_mask_from_idx(data_size, train_idxs)
+        #     val_mask = get_mask_from_idx(data_size, val_idxs)
+        #     test_mask = get_mask_from_idx(data_size, test_idxs)
+        #     trainloader = BatchDataloader(dataset.X, dataset.y, dataset.a, bs=self.args.local_bs, mask=train_mask)
+        #     validloader = BatchDataloader(dataset.X, dataset.y, dataset.a, bs=self.args.local_bs, mask=val_mask)
+        #     testloader = BatchDataloader(dataset.X, dataset.y, dataset.a, bs=self.args.local_bs, mask=test_mask)
+        #     # print("ptb-xl Loader!")
+        # else:
         trainloader = DataLoader(DatasetSplit(dataset, train_idxs),
-                                 batch_size=self.args.local_bs, shuffle=True)
+                                batch_size=self.args.local_bs, shuffle=True)
         validloader = DataLoader(DatasetSplit(dataset, val_idxs),
-                                 batch_size=int(len(val_idxs)/10), shuffle=False)
+                                batch_size=int(len(val_idxs)/10), shuffle=False)
         testloader = DataLoader(DatasetSplit(dataset, test_idxs),
                                 batch_size=int(len(test_idxs)/10), shuffle=False)
         
@@ -236,10 +300,16 @@ class LocalUpdate(object):
         for iter in range(self.args.local_ep):
             batch_loss = []
             for batch_idx, (images, labels, _) in enumerate(self.trainloader):
+                # [a,b,c] = images.shape
+                # print("images shape: ", images.shape)
+                # print(a,b,c)
+                # images = torch.reshape(images, (b,c,a))
+                # print("images shape new: ", images.shape)
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 model.zero_grad()
                 # log_probs = model(images)
+
                 log_probs = model(images).squeeze()
                 log_probs = log_probs.reshape(-1)
                 loss = self.criterion(log_probs, labels)
@@ -433,6 +503,8 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
             local_dataset =  dataset.CompasDataset(csv_file="", df=local_set_df)
         elif datasetname == "wcld":
             local_dataset =  dataset.WCLDDataset(csv_file="", df=local_set_df)
+        elif datasetname == "ptb-xl":
+            local_dataset =  dataset.PTBDataset(csv_file="", df=local_set_df)       
 
 
         pred_labels, accuracy, local_fairness, labels, s_attr = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
