@@ -91,6 +91,8 @@ def args_parser():
     
     parser.add_argument('--local_split', type=str, default="", help='File path if use saved local client train/test split; Empty if want a newly generated one.')
     
+    parser.add_argument('--kaggle', type=bool, default=False, help='if runs on kaggle')
+    
 
     args = parser.parse_args()
     return args

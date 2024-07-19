@@ -140,6 +140,16 @@ if __name__ == '__main__':
         if args.dataset == 'adult':
             len_in = 32
             global_model = Plain_LR_Adult(dim_in=len_in)
+        elif args.dataset == 'compas':
+            img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
+                #                 dim_out=args.num_classes)
+                # global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
+                                # dim_out=args.num_classes)
+            global_model = Plain_LR_Adult(dim_in=len_in)
     else:
         exit('Error: unrecognized model')
 
@@ -658,13 +668,17 @@ if __name__ == '__main__':
         stat_dic["test_eod_fairfed"] = local_fairness_ls
 
 
+    if args.kaggle:
+        save_to_root = "/kaggle/working"
+    else:
+        save_to_root =  os.getcwd() + '/save'
 
     all_fl = ""
     if args.fl_new:
         all_fl = all_fl + "new"
     if args.fl_fairfed:
         all_fl = all_fl + "fairfed"    
-    statistics_dir = os.getcwd() + '/save/statistics/{}/{}_{}_{}_{}_frac{}_client{}_{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
+    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
         format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
                args.post_proc_cost, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
         # Save to files ...
@@ -758,7 +772,7 @@ if __name__ == '__main__':
     print("|---- Test Accuracy: {:.2f}%".format(100*test_acc))
 
     # Saving the objects train_loss and train_accuracy:
-    file_name = os.getcwd() + '/save/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
+    file_name = save_to_root + '/objects/{}_{}_{}_C[{}]_iid[{}]_E[{}]_B[{}].pkl'.\
         format(args.dataset, args.model, args.epochs, args.frac, args.iid,
                args.local_ep, args.local_bs)
 

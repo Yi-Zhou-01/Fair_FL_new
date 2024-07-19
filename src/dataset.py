@@ -36,7 +36,8 @@ class AdultDataset(Dataset):
         self.s_attr = "sex_1"
         self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
 
-        self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.X = self.df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
@@ -95,7 +96,8 @@ class CompasDataset(Dataset):
         self.s_attr = "sex"
         self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
 
-        self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.X = self.df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
@@ -180,7 +182,10 @@ class PTBDataset(Dataset):
 
         # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
         if traces:
-            path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+            if "kaggle" in csv_file:
+                path_to_traces = "/kaggle/inpu/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+            else:
+                path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
             f = h5py.File(path_to_traces, 'r')
             self.X = np.array(f["tracings"][:]) 
         else:
@@ -220,8 +225,11 @@ def get_bld_dataset_w_pred(test_dataset, prediction_test):
 #         csv_file_val =  os.getcwd()+'/data/adult/adult_dummy.csv'
 #         train_dataset = AdultDataset(csv_file_train)
 
-def get_partition(p_idx, dataset="adult"):
-    path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
+def get_partition(kaggle, p_idx, dataset="adult"):
+    if kaggle:
+        path_root = "/kaggle/input/" + dataset + '/partition/' + str(p_idx)
+    else:
+        path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
     file_ls = os.listdir(path_root)
     partition_file_ls = [file for file in file_ls if '.npy' in file]
     partition_file = path_root + '/' + partition_file_ls[0]
@@ -235,6 +243,11 @@ def get_dataset(args):
     each of those users.
     """
 
+    if args.kaggle:
+        data_path = "/kaggle/input"
+    else:
+        data_path = os.getcwd()+"/data"
+
     if  args.dataset == 'adult':
 
         # csv_file_train = os.getcwd()+'/data/adult/adult_encoded_80train.csv'
@@ -243,41 +256,41 @@ def get_dataset(args):
         # csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_80train.csv'
         # csv_file_test =  os.getcwd()+'/data/adult/adult_all_33col_20test.csv'
 
-        csv_file_train = os.getcwd()+'/data/adult/adult_all_33col.csv'
+        csv_file_train = data_path+'/adult/adult_all_33col.csv'
         # csv_file_train = os.getcwd()+'/data/adult/adult_all_33col_70train_0.csv'
-        csv_file_test =  os.getcwd()+'/data/adult/adult_all_33col_20test_0.csv'
-        csv_file_val =  os.getcwd()+'/data/adult/adult_all_33col_10val_0.csv'
+        csv_file_test =  data_path+'/adult/adult_all_33col_20test_0.csv'
+        csv_file_val =  data_path+'/adult/adult_all_33col_10val_0.csv'
 
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
-        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'compas':
 
-        csv_file_train = os.getcwd()+'/data/compas/compas_encoded_all.csv'
+        csv_file_train =data_path+'/compas/compas_encoded_all.csv'
 
         train_dataset = CompasDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
     elif args.dataset == 'wcld':
 
-        csv_file_train = os.getcwd()+'/data/wcld/wcld_60000.csv'
+        csv_file_train =data_path+'/wcld/wcld_60000.csv'
 
         train_dataset = WCLDDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'ptb-xl':
 
-        csv_file_train = os.getcwd()+'/data/ptb-xl/ptbxl_all_clean_new.csv'
+        csv_file_train = data_path+'/ptb-xl/ptbxl_all_clean_new.csv'
 
         train_dataset = PTBDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
     # elif args.dataset == 'cifar':

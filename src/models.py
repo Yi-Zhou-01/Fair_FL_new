@@ -102,6 +102,7 @@ class MLPAdult2(nn.Module):
 class MLPCompas(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out):
         super(MLPCompas, self).__init__()
+        print("Dim in: ", dim_in)
         self.mlp = nn.Sequential(
             nn.Linear(in_features=dim_in, out_features=64),
             nn.ReLU(),
@@ -285,7 +286,7 @@ class Plain_LR_Adult(nn.Module):
         super(Plain_LR_Adult, self).__init__()
 
         self.input_size = dim_in
-        self.fc1 = nn.Linear(self.input_size, 1)
+        self.final_layer = nn.Linear(self.input_size, 1)
 
         # super(MLPAdult, self).__init__()
         # self.layer_1 = nn.Linear(in_features=32, out_features=64)
@@ -295,9 +296,15 @@ class Plain_LR_Adult(nn.Module):
         # self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.1)
     def forward(self, x):
-        prediction = nn.functional.sigmoid(self.fc1(x))
+        prediction = nn.functional.sigmoid(self.final_layer(x))
 
         return prediction
+
+    def get_features(self, x):
+        return x
+    
+    def set_grad(self,val):
+        return True
 
     # def forward(self, x):
     #     x = self.dropout(self.relu(self.layer_1(x)))
