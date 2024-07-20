@@ -55,6 +55,25 @@ if __name__ == '__main__':
         torch.cuda.set_device(args.gpu)
     device = 'cuda' if args.gpu else 'cpu'
 
+
+    # Create folder to save training info
+    if args.kaggle:
+        save_to_root = "/kaggle/working"
+    else:
+        save_to_root =  os.getcwd() + '/save'
+
+    all_fl = ""
+    if args.fl_new:
+        all_fl = all_fl + "new"
+    if args.fl_fairfed:
+        all_fl = all_fl + "fairfed"    
+    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
+        format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
+               args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
+        # Save to files ...
+        # TBA
+    os.makedirs(statistics_dir, exist_ok=True)
+
     # load dataset and user groups
     # user groups: different client datasets
     train_dataset, test_dataset, user_groups = dataset.get_dataset(args)
@@ -145,10 +164,12 @@ if __name__ == '__main__':
             len_in = 1
             for x in img_size:
                 len_in *= x
-                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
-                #                 dim_out=args.num_classes)
-                # global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
-                                # dim_out=args.num_classes)
+            global_model = Plain_LR_Adult(dim_in=len_in)
+        elif args.dataset == 'wcld':
+            img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
             global_model = Plain_LR_Adult(dim_in=len_in)
     else:
         exit('Error: unrecognized model')
@@ -197,6 +218,7 @@ if __name__ == '__main__':
     stat_dic = {k: [] for k in stat_keys}
     pred_train_dic = {}
     pred_test_dic = {}
+    local_loss_all = []
 
     if args.fl_new:
         print("********* Start FedAvg/New Training **********")
@@ -219,7 +241,7 @@ if __name__ == '__main__':
                                         idxs=user_groups[idx], logger=logger)
 
 
-                w, loss = local_model.update_weights(
+                w, loss, _ = local_model.update_weights(
                     model=copy.deepcopy(global_model), global_round=epoch)
                 local_weights.append(copy.deepcopy(w))
                 local_losses.append(copy.deepcopy(loss))
@@ -232,6 +254,7 @@ if __name__ == '__main__':
 
             loss_avg = sum(local_losses) / len(local_losses)
             train_loss.append(loss_avg)
+            local_loss_all.append(local_losses)
 
             # Actually it is local test accuracy
             # Calculate avg training accuracy over all users at every epoch
@@ -259,7 +282,9 @@ if __name__ == '__main__':
         
         # Evaluation locally after training
         # print("********* Start Local Evaluation and Post-processing **********")
-
+        plot_file_loss = statistics_dir + "/loss_plot.png"
+        fig_titl_loss = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
+        plot.plot_loss(local_loss_all, train_loss,title=fig_titl_loss, save_to=plot_file_loss)
         
         # Measure local train/test acc & fairness before post-processing
 
@@ -550,7 +575,7 @@ if __name__ == '__main__':
                                         idxs=user_groups[idx], logger=logger)
 
                 # Update local model parameters
-                w, loss = local_model.update_weights(
+                w, loss, _ = local_model.update_weights(
                     model=copy.deepcopy(global_model), global_round=epoch)
                 
                 local_weights.append(copy.deepcopy(w))
@@ -668,22 +693,7 @@ if __name__ == '__main__':
         stat_dic["test_eod_fairfed"] = local_fairness_ls
 
 
-    if args.kaggle:
-        save_to_root = "/kaggle/working"
-    else:
-        save_to_root =  os.getcwd() + '/save'
 
-    all_fl = ""
-    if args.fl_new:
-        all_fl = all_fl + "new"
-    if args.fl_fairfed:
-        all_fl = all_fl + "fairfed"    
-    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
-        format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
-               args.post_proc_cost, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
-        # Save to files ...
-        # TBA
-    os.makedirs(statistics_dir, exist_ok=True)
     # print(stat_dic)
     # for key in stat_dic.keys():
     #     print(key, len(stat_dic[key]))

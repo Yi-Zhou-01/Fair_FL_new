@@ -255,7 +255,8 @@ class LocalUpdate(object):
                 # loss = self.criterion(log_softmax, labels)
                 # loss_1 = nn.NLLLoss(weight=class_weights)(log_softmax, labels)
                 # loss = loss_1*0.005 + self.args.ft_alpha * eod_loss
-                loss = loss_1 + self.args.ft_alpha * eod_loss
+                # loss = loss_1 + self.args.ft_alpha * eod_loss
+                loss = loss_1*0 + self.args.ft_alpha * eod_loss
                 # loss = eod_loss
 
                 loss.backward(retain_graph=True)
@@ -328,7 +329,7 @@ class LocalUpdate(object):
                 batch_loss.append(loss.item())
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
 
-        return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
+        return model.state_dict(), sum(epoch_loss) / len(epoch_loss), batch_loss
 
     def inference(self, model):
         """ Returns the inference accuracy and loss of local test data (?). 

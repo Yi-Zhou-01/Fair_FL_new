@@ -98,6 +98,7 @@ class CompasDataset(Dataset):
 
         # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
         self.X = self.df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+        self.X = self.standardlize_X(self.X)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
@@ -114,6 +115,17 @@ class CompasDataset(Dataset):
             return [self.X[idx], self.y[idx], self.a[idx]]
         else:
             return [self.X[idx], self.y[idx]]
+        
+    
+    def standardlize_X(self, X_data):
+        # Define the columns to standardize
+        # columns_to_standardize = [26, 27, 28, 29, 30, 31]
+        columns_to_standardize = list(range(len(self.X[0]))) # standardize all
+        scaler = StandardScaler()
+        scaler.fit(X_data[:, columns_to_standardize])
+        X_data[:, columns_to_standardize] = scaler.transform(X_data[:, columns_to_standardize])
+
+        return X_data
 
 
 
@@ -139,6 +151,7 @@ class WCLDDataset(Dataset):
         self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
 
         self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+        self.X = self.standardlize_X(self.X)
         self.y = self.df[self.target].to_numpy().astype(np.float32)
         self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
@@ -155,6 +168,17 @@ class WCLDDataset(Dataset):
             return [self.X[idx], self.y[idx], self.a[idx]]
         else:
             return [self.X[idx], self.y[idx]]
+    
+    def standardlize_X(self, X_data):
+        # Define the columns to standardize
+        # columns_to_standardize = [26, 27, 28, 29, 30, 31]
+        columns_to_standardize = list(range(9)) # standardize all
+        scaler = StandardScaler()
+        scaler.fit(X_data[:, columns_to_standardize])
+        X_data[:, columns_to_standardize] = scaler.transform(X_data[:, columns_to_standardize])
+
+        return X_data
+
 
 class PTBDataset(Dataset):
     """Students Performance dataset."""
