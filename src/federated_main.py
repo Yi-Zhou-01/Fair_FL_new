@@ -87,11 +87,15 @@ if __name__ == '__main__':
             local_dataset = update.LocalDataset(train_dataset, local_idxs, test_ratio=args.local_test_ratio)
             local_set_ls.append(local_dataset)
             print("New local train/test split generated!")
+            # print("check shape")
+            # print(local_set_ls[i].local_test_set.X.shape)
     else:
         with open(args.local_split, 'rb') as inp:
             local_set_ls = pickle.load(inp)
             print("Using saved local train/test split in: ", args.local_split)
 
+    
+    
 
     # BUILD MODEL
     if args.dataset == 'ptb-xl':
@@ -293,9 +297,9 @@ if __name__ == '__main__':
         
         if args.plot_tpfp:
             acc_test, fairness_test, pred_labels_test, labels_test, s_attr_ls_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-                                                           args.gpu, set="test", fairness_metric=["eod","tpr","fpr"], return_label=True)
+                                                           args.gpu, set="test", fairness_metric=["eod","tpr","fpr"], return_label=True, kaggle=args.kaggle)
             acc_train, fairness_train, pred_labels_train,labels_train, s_attr_ls_train = update.get_all_local_metrics(args.dataset,args.num_users, global_model, local_set_ls,
-                                                            args.gpu, set="train", fairness_metric=["eod","tpr","fpr"], return_label=True)
+                                                            args.gpu, set="train", fairness_metric=["eod","tpr","fpr"], return_label=True, kaggle=args.kaggle)
             stat_dic["test_acc_fedavg"] = acc_test
             stat_dic["train_acc_fedavg"] = acc_train
             stat_dic["test_eod_fedavg"] = fairness_test["eod"]
@@ -306,9 +310,9 @@ if __name__ == '__main__':
             stat_dic["train_fpr_fedavg"] = fairness_train["fpr"]
         else:
             acc_test, fairness_test, pred_labels_test, labels_test, s_attr_ls_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-                                                           args.gpu, set="test", fairness_metric=["eod"], return_label=True)
+                                                           args.gpu, set="test", fairness_metric=["eod"], return_label=True, kaggle=args.kaggle)
             acc_train, fairness_train, pred_labels_train,labels_train, s_attr_ls_train = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-                                                            args.gpu, set="train", fairness_metric=["eod"], return_label=True)
+                                                            args.gpu, set="train", fairness_metric=["eod"], return_label=True, kaggle=args.kaggle)
             stat_dic["test_acc_fedavg"] = acc_test
             stat_dic["test_eod_fedavg"] = fairness_test["eod"]
             stat_dic["train_acc_fedavg"] = acc_train
@@ -367,8 +371,8 @@ if __name__ == '__main__':
 
         '''
 
-        privileged_groups = [{train_dataset.s_attr: 1}]
-        unprivileged_groups = [{train_dataset.s_attr: 0}]
+        privileged_groups = [{"a": 1}]
+        unprivileged_groups = [{"a": 0}]
 
 
         # train_acc_new = []
@@ -384,20 +388,26 @@ if __name__ == '__main__':
             pred_test_dic['pred_labels_pp'] = []
             for idx in range(args.num_users):
                 idxs = user_groups[idx]
-                train_set_df = local_set_ls[idx].train_set
-                test_set_df = local_set_ls[idx].test_set
+                local_set = local_set_ls[idx]
+
+                # train_set_df = local_set_ls[idx].train_set
+                # test_set_df = local_set_ls[idx].test_set
 
                 # Post-processing with local dataset
                 # train_set_df = train_dataset.df[train_dataset.df.index.isin(idxs_train)]
 
-                local_train_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=train_set_df)
-                local_test_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=test_set_df)
+                # local_train_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=train_set_df, kaggle=args.kaggle)
+                # local_test_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=test_set_df, kaggle=args.kaggle)
               
-                local_train_prediction, local_train_acc = update.get_prediction(args, global_model, local_train_dataset)
-                train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
+                local_train_prediction, local_train_acc = update.get_prediction(args, global_model, X=local_set.local_train_set.X, Y=local_set.local_train_set.y)
+                # train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
+                train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a=local_set.local_train_set.a, pred_labels=local_train_prediction)
+                train_bld_original = dataset.get_bld_dataset_w_pred(a=local_set.local_train_set.a, pred_labels=local_set.local_train_set.y)
                 
-                local_test_prediction, local_acc = update.get_prediction(args, global_model, local_test_dataset)
-                local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
+                local_test_prediction, local_acc = update.get_prediction(args, global_model, X=local_set.local_test_set.X, Y=local_set.local_test_set.y)
+                # local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
+                test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a=local_set.local_test_set.a, pred_labels=local_test_prediction)
+                test_bld_original = dataset.get_bld_dataset_w_pred(a=local_set.local_test_set.a, pred_labels=local_set.local_test_set.y)
 
                 cost_constraint = args.post_proc_cost # "fpr" # "fnr", "fpr", "weighted"
                 # cost_constraint = "fnr"
@@ -409,18 +419,19 @@ if __name__ == '__main__':
                 #                                 unprivileged_groups = unprivileged_groups,
                 #                                 cost_constraint=cost_constraint,
                 #                                 seed=randseed)
+                
                 cpp = EqOddsPostprocessing(privileged_groups = privileged_groups,
                                                 unprivileged_groups = unprivileged_groups,
                                                 seed=randseed)
-                cpp = cpp.fit(local_train_dataset.bld, train_bld_prediction_dataset)
+                cpp = cpp.fit(train_bld_original, train_bld_prediction_dataset)
 
                 
                 # Prediction after post-processing
                 local_train_dataset_bld_prediction_debiased = cpp.predict(train_bld_prediction_dataset)
-                local_test_dataset_bld_prediction_debiased = cpp.predict(local_test_bld_prediction_dataset)
+                local_test_dataset_bld_prediction_debiased = cpp.predict(test_bld_prediction_dataset)
 
                 # Metrics after post-processing
-                cm_pred_train_debiased = ClassificationMetric(local_train_dataset.bld, local_train_dataset_bld_prediction_debiased,
+                cm_pred_train_debiased = ClassificationMetric(train_bld_original, local_train_dataset_bld_prediction_debiased,
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
                 
@@ -440,7 +451,7 @@ if __name__ == '__main__':
                 # stat_dic['train_tpr_new'].append(abs( cm_pred_train_debiased.difference(cm_pred_train_debiased.true_positive_rate)))
 
 
-                cm_pred_test_debiased = ClassificationMetric(local_test_dataset.bld, local_test_dataset_bld_prediction_debiased,
+                cm_pred_test_debiased = ClassificationMetric(test_bld_original, local_test_dataset_bld_prediction_debiased,
                             unprivileged_groups=unprivileged_groups,
                             privileged_groups=privileged_groups)
 
@@ -482,19 +493,23 @@ if __name__ == '__main__':
                 
                 local_train_model.load_state_dict(weights)
 
-                # Test acc & fairness
-                local_dataset_test = dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].test_set) 
-                local_dataset_train =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].train_set) 
+                # # Test acc & fairness
+                # local_dataset_test = dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].test_set, kaggle=args.kaggle) 
+                # local_dataset_train =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_ls[i].train_set, kaggle=args.kaggle) 
 
                 fairness_metric = ["eod", "tpr", "fpr"]
-                pred_labels, accuracy, local_fairness, _,_ = update.get_prediction_w_local_fairness(args.gpu, local_train_model, local_dataset_test, fairness_metric)
+                pred_labels, accuracy, local_fairness, _,_ = update.get_prediction_w_local_fairness(args.gpu, local_train_model, \
+                                                                                                    X=local_dataset.local_test_set.X, Y=local_dataset.local_test_set.y,
+                                                                                                      a=local_dataset.local_test_set.a, fairness_metric=fairness_metric)
                 
                 stat_dic['test_acc_new_ft'].append(accuracy)
                 stat_dic['test_eod_new_ft'].append(local_fairness["eod"])
                 stat_dic['test_tpr_new_ft'].append(local_fairness["tpr"])
                 stat_dic['test_fpr_new_ft'].append(local_fairness["fpr"])
 
-                pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, local_train_model, local_dataset_train, fairness_metric)
+                pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, local_train_model, \
+                                                                                                   X=local_dataset.local_train_set.X, Y=local_dataset.local_train_set.y,
+                                                                                                      a=local_dataset.local_train_set.a, fairness_metric=fairness_metric)
                 stat_dic['train_acc_new_ft'].append(accuracy)
                 stat_dic['train_eod_new_ft'].append(local_fairness["eod"])
                 stat_dic['train_tpr_new_ft'].append(local_fairness["tpr"])
@@ -548,15 +563,18 @@ if __name__ == '__main__':
             local_fairness_ls = []
             prediction_ls = []
             for i in range(args.num_users):
-                local_set_df = local_set_ls[i].train_set
-                local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
-                pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+                local_set = local_set_ls[i]
+                # local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df, kaggle=args.kaggle)
+
+                pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, \
+                                                                                                   X=local_set.local_train_set.X, Y=local_set.local_train_set.y, \
+                                                                                                     a=local_set.local_train_set.a, fairness_metric="eod")
                 local_fairness_ls.append(local_fairness["eod"])
                 prediction_ls.append(pred_labels)
 
             # Compute global fairness
             
-            global_acc, global_fairness = update.get_global_fairness(train_dataset, local_set_ls, prediction_ls, "eod", "train")
+            global_acc, global_fairness = update.get_global_fairness(local_set_ls, prediction_ls, "eod", "train")
 
             # Compute weighted mean metric gap
             metric_gap = [abs(global_fairness - lf) for lf in local_fairness_ls]
@@ -660,9 +678,12 @@ if __name__ == '__main__':
         local_fairness_ls = []
         local_acc_ls = []
         for i in range(args.num_users):
-            local_set_df = local_set_ls[i].train_set
-            local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
-            pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+            # local_set_df = local_set_ls[i].train_set
+            local_set = local_set_ls[i]
+            # local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df, kaggle=args.kaggle)
+            pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, \
+                                                                                                X=local_set.local_train_set.X, Y=local_set.local_train_set.y, \
+                                                                                                     a=local_set.local_train_set.a, fairness_metric="eod")
             local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
         
@@ -678,9 +699,12 @@ if __name__ == '__main__':
         local_fairness_ls = []
         local_acc_ls = []
         for i in range(args.num_users):
-            local_set_df = local_set_ls[i].test_set
-            local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df)
-            pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, local_dataset, "eod")
+            # local_set_df = local_set_ls[i].test_set
+            local_set = local_set_ls[i]
+            # local_dataset =  dataset.get_dataset_from_df(dataset_name=args.dataset, df=local_set_df, kaggle=args.kaggle)
+            pred_labels, accuracy, local_fairness,_,_ = update.get_prediction_w_local_fairness(args.gpu, global_model, \
+                                                                                                X=local_set.local_test_set.X, Y=local_set.local_test_set.y, \
+                                                                                                     a=local_set.local_test_set.a, fairness_metric="eod")
             local_fairness_ls.append(local_fairness["eod"])
             local_acc_ls.append(accuracy)
         
@@ -772,7 +796,8 @@ if __name__ == '__main__':
     # Test inference after completion of training
     test_acc, test_loss = test_inference(args, global_model, test_dataset)
 
-    prediction_test, _ = update.get_prediction(args, global_model, test_dataset)
+    prediction_test, _ = update.get_prediction(args, global_model, test_dataset.X, test_dataset.y)
+    # X=local_set.local_test_set.X, Y=local_set.local_test_set.y)
     # print("prediction_test")
     # print(prediction_test)
     
@@ -794,6 +819,12 @@ if __name__ == '__main__':
     print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
 
 
+    # print("Check local set: ")
+    # print(local_set_ls[0].local_train_set.X)
+    # print(local_set_ls[0].local_train_set.y)
+    # print(local_set_ls[0].local_train_set.a)
+    # print("Check global set: ")
+    # print(train_dataset.a)
     # Check statistics of training set
     utils.check_train_test_split(args.num_users, pred_train_dic, pred_test_dic, save_dir=statistics_dir)
     

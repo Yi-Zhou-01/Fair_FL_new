@@ -103,54 +103,97 @@ class BatchDataloader:
 
 
 class LocalDataset(object):
-    def __init__(self, dataset, local_idxs, test_ratio=0.2):
+    def __init__(self, global_dataset, local_idxs, test_ratio=0.2):
         
         self.local_idxs = local_idxs
-        self.local_dataset =  dataset.df[dataset.df.index.isin(local_idxs)]
-        self.target_label = dataset.target
-
-
         self.test_ratio = test_ratio
-        self.train_set, self.test_set, self.val_set, self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  = self.train_test_split()
+        # all_X = global_dataset.X
+        # all_y = global_dataset.y
+        # all_a = global_dataset.a
+
+        # self.local_dataset =  dataset.df[dataset.df.index.isin(local_idxs)]
+        self.target_label = global_dataset.target
+        self.s_attr =  global_dataset.s_attr
+       
+        # self.local_train_set, self.local_test_set, self.local_val_set=  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
+
+
+        self.local_train_set, self.local_test_set, self.local_val_set, \
+             self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
+
+
+        # self.train_set_X, self.train_set_Y, self.train_set_a, \
+        #     self.test_set_X, self.test_set_Y, self.test_set_a, \
+        #         self.val_set_X, self.val_set_Y, self.val_set_a, \
+        #             self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  = self.train_test_split()
         
-        self.train_len = len(self.train_set_idxs)
-        self.test_len = len(self.test_set_idxs)
-        self.val_len = len(self.val_set_idxs)
+        # self.train_len = len(self.train_set_idxs)
+        # self.test_len = len(self.test_set_idxs)
+        # self.val_len = len(self.val_set_idxs)
         
-        self.size = len(self.local_dataset)
+        self.size = len(self.local_idxs)
         # self.train_set, self.test_set, self.val_set = self.train_test_split()
         
 
     # Return df
-    def train_test_split(self):
-
-        # print("Local dataset")
-        # print(self.local_dataset[:5].index)
-        # print(self.local_dataset[-5:].index)
+    def train_test_split(self, name, X, y, a):
 
         
-        X = self.local_dataset.drop(self.target_label, axis=1)
-        y = self.local_dataset[self.target_label]
+        # X = self.local_dataset.drop(self.target_label, axis=1)
+        # y = self.local_dataset[self.target_label]
+        # a = self.local_dataset[self.s_attr]
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_ratio, stratify=y)
+        if name == "ptb-xl":
+            dummy_X = np.array(range(len(X)))
+            X_train, X_test, y_train, y_test, a_train, a_test  = train_test_split(pd.DataFrame(dummy_X), pd.DataFrame(y), pd.DataFrame(a), test_size=self.test_ratio, stratify=y)
+            X_val = X_test
+            train_set_idxs =  list(X_train.index)
+            test_set_idxs = list(X_test.index)
+            val_set_idxs = list(X_val.index)
+            # print("train shape before", X[X_train].shape)
+
+            X_train =np.squeeze(X[X_train])
+            # print("train shape after", X_train.shape)
+            X_test = np.squeeze(X[X_test])
+            X_val =  np.squeeze(X[X_val])
+            
+            
+        else:
+            X_train, X_test, y_train, y_test, a_train, a_test  = train_test_split(pd.DataFrame(X), pd.DataFrame(y), pd.DataFrame(a), test_size=self.test_ratio, stratify=y)
+            X_val = X_test
+            train_set_idxs =  list(X_train.index)
+            test_set_idxs = list(X_test.index)
+            val_set_idxs = list(X_val.index)
+
 
         # X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5, stratify=y_test)
 
-        X_train[self.target_label] = y_train
-        X_test[self.target_label] = y_test
+        # X_train[self.target_label] = y_train
+        # X_test[self.target_label] = y_test
     
         # X_val[self.target_label] = y_val
-        X_val = X_test
+        
+        # y_val = y_test
+        # a_val = a_test
         # y_val = y_test
 
+        if name == "compas":
+            local_train_set = dataset.CompasDataset(csv_file="", X=X_train, y=y_train,a=a_train)
+            local_test_set = dataset.CompasDataset(csv_file="", X=X_test, y=y_test,a=a_test)
+            local_val_set = local_test_set
+        elif name == "ptb-xl":
+            # print("train shape before", X_train.shape)
+            local_train_set = dataset.PTBDataset(csv_file="", X=X_train, y=y_train,a=a_train)
+            # print("train shape after", local_train_set.X.shape)
+            local_test_set = dataset.PTBDataset(csv_file="", X=X_test, y=y_test,a=a_test)
+            local_val_set = local_test_set
+        else:
+            print("!! ERROR: Dataset not implemented in LocalDataset: train_test_split")
 
-        # print("Local Train")
-        # print(X_train[:5].index)
 
-        # print("Local Test")
-        # print(X_test[:5].index)
-
-        return X_train, X_test, X_val, list(X_train.index), list(X_test.index), list(X_val.index)
+        return local_train_set, local_test_set, local_val_set, train_set_idxs, test_set_idxs, val_set_idxs
+    # X_train.values, y_train.values, a_train.values, X_test.values, y_test.values, a_test.values, X_val.values, y_val.values, a_val.values, \
+            # list(X_train.index), list(X_test.index), list(X_val.index)
 
 
 
@@ -405,7 +448,7 @@ def test_inference(args, model, test_dataset):
     accuracy = correct/total
     return accuracy, loss
 
-def get_prediction(args, model, test_dataset):
+def get_prediction(args, model, X, Y):
 
     """ Returns the test accuracy and loss.
     """
@@ -414,8 +457,10 @@ def get_prediction(args, model, test_dataset):
     device = 'cuda' if args.gpu else 'cpu'
     # criterion = nn.NLLLoss().to(device)
 
-    X_tensor = torch.tensor(test_dataset.X)
-    Y_tensor  = torch.tensor(test_dataset.y)
+    # X_tensor = torch.tensor(test_dataset.X)
+    # Y_tensor  = torch.tensor(test_dataset.y)
+    X_tensor = torch.tensor(X)
+    Y_tensor  = torch.tensor(Y)
     images, labels = X_tensor.to(device), Y_tensor.to(device)
     outputs = model(images).squeeze()
     pred_labels = [ int(pred >= 0.5) for pred in outputs]
@@ -432,7 +477,7 @@ def get_prediction(args, model, test_dataset):
     return pred_labels, accuracy
 
 
-def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
+def get_prediction_w_local_fairness(gpu, model, X, Y, a, fairness_metric=["eod"]):
     
     """ Returns the test accuracy and loss.
     """
@@ -441,9 +486,10 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     device = 'cuda' if gpu else 'cpu'
     # criterion = nn.NLLLoss().to(device)
 
-    X_tensor = torch.tensor(test_dataset.X)
-    Y_tensor  = torch.tensor(test_dataset.y)
-    s_attr_ls = list(test_dataset.df[test_dataset.s_attr])
+    X_tensor = torch.tensor(X)
+    Y_tensor  = torch.tensor(Y)
+    # s_attr_ls = list(test_dataset.df[test_dataset.s_attr])
+    s_attr_ls = a
     images, labels = X_tensor.to(device), Y_tensor.to(device)
     outputs = model(images).squeeze()
     # pred_labels = [ int(pred >= 0.5) for pred in outputs]
@@ -453,22 +499,25 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     # print("Len of pred_labels set: ", len(pred_labels))
     # print(pred_labels)
 
-    train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(test_dataset, pred_labels)
+    train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a, pred_labels)
+    original_bld = dataset.get_bld_dataset_w_pred(a, Y )
                 
-    privileged_groups = [{test_dataset.s_attr: 1}]
-    unprivileged_groups = [{test_dataset.s_attr: 0}]
-    cm_pred_train = ClassificationMetric(test_dataset.bld, train_bld_prediction_dataset,
+    # privileged_groups = [{s_attr: 1}]
+    # unprivileged_groups = [{s_attr: 0}]
+    privileged_groups = [{"a": 1}]
+    unprivileged_groups = [{"a": 0}]
+    cm_pred_train = ClassificationMetric(original_bld, train_bld_prediction_dataset,
     unprivileged_groups=unprivileged_groups,
     privileged_groups=privileged_groups)
 
     accuracy = cm_pred_train.accuracy()
     local_fairness = {}
-    if "eod" in metric:
+    if "eod" in fairness_metric:
         local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
         # local_fairness["eod"] = (cm_pred_train.average_abs_odds_difference())
-    if "tpr" in metric:
+    if "tpr" in fairness_metric:
         local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
-    if "fpr" in metric:
+    if "fpr" in fairness_metric:
         local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
 
 
@@ -479,7 +528,7 @@ def get_prediction_w_local_fairness(gpu, model, test_dataset, metric=["eod"]):
     return pred_labels, accuracy, local_fairness, labels, s_attr_ls
 
 
-def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, set="test", fairness_metric=["eod"], return_label=False):
+def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, kaggle, set="test", fairness_metric=["eod"], return_label=False):
     local_fairness_ls = {}
     local_acc_ls = []
     labels_ls = []
@@ -494,21 +543,29 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
 
     for i in range(num_users):
         if set == "test":
-            local_set_df = local_set_ls[i].test_set
+            # local_set_df = local_set_ls[i].test_set
+            pred_labels, accuracy, local_fairness, labels, s_attr = \
+                get_prediction_w_local_fairness(gpu, global_model, local_set_ls[i].local_test_set.X, local_set_ls[i].local_test_set.y, local_set_ls[i].local_test_set.a, \
+                                                 fairness_metric=fairness_metric)
         elif set == "train":
-            local_set_df = local_set_ls[i].train_set
+            # local_set_df = local_set_ls[i].train_set
+            pred_labels, accuracy, local_fairness, labels, s_attr = \
+                get_prediction_w_local_fairness(gpu, global_model, local_set_ls[i].local_train_set.X, local_set_ls[i].local_train_set.y, local_set_ls[i].local_train_set.a, \
+                                                  fairness_metric=fairness_metric)
+        else:
+            print( "Wrong set in update.get_all_local_metrics ")
 
-        if datasetname == "adult":
-            local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
-        elif datasetname == "compas":
-            local_dataset =  dataset.CompasDataset(csv_file="", df=local_set_df)
-        elif datasetname == "wcld":
-            local_dataset =  dataset.WCLDDataset(csv_file="", df=local_set_df)
-        elif datasetname == "ptb-xl":
-            local_dataset =  dataset.PTBDataset(csv_file="", df=local_set_df)       
+        # if datasetname == "adult":
+        #     local_dataset =  dataset.AdultDataset(csv_file="", df=local_set_df)
+        # elif datasetname == "compas":
+        #     local_dataset =  dataset.CompasDataset(csv_file="", df=local_set_df)
+        # elif datasetname == "wcld":
+        #     local_dataset =  dataset.WCLDDataset(csv_file="", df=local_set_df)
+        # elif datasetname == "ptb-xl":
+        #     local_dataset =  dataset.PTBDataset(csv_file="", df=local_set_df, kaggle=kaggle)       
 
 
-        pred_labels, accuracy, local_fairness, labels, s_attr = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
+        # pred_labels, accuracy, local_fairness, labels, s_attr = get_prediction_w_local_fairness(gpu, global_model, local_dataset, fairness_metric)
         local_acc_ls.append(accuracy)
         if return_label:
             pred_labels_ls.append(pred_labels)
@@ -527,32 +584,41 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
         return local_acc_ls, local_fairness_ls
 
 
-def get_global_fairness(dataset, local_dataset_ls, prediction_ls, metric="eod", set="train"):
+def get_global_fairness(local_dataset_ls, prediction_ls, metric="eod", set="train"):
     '''
     Given local dataset split and predictions, return local fairness score
     '''
 
-    rows = []
-    for i in range(len(local_dataset_ls)):
-        if set == "train":
-            local_idxs = local_dataset_ls[i].train_set_idxs
-        elif set == "test":
-            local_idxs = local_dataset_ls[i].test_set_idxs
-        
-        for idx in  local_idxs:
-            rows.append(dataset.df.iloc[idx])
+    if set=="train":
+        all_a = [x for i in range(len(local_dataset_ls)) for x in local_dataset_ls[i].local_train_set.a ]
+        all_Y = [x for i in range(len(local_dataset_ls)) for x in local_dataset_ls[i].local_train_set.y ]
     
-    new_dataset = pd.DataFrame(rows)
-    original_bld_dataset = BinaryLabelDataset(df=new_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+    elif set == "test":
+        all_a = [x for i in range(len(local_dataset_ls)) for x in local_dataset_ls[i].local_test_set.a ]
+        all_Y = [x for i in range(len(local_dataset_ls)) for x in local_dataset_ls[i].local_test_set.y ]
+
+
+    # for i in range(len(local_dataset_ls)):
+    #     if set == "train":
+    #         local_idxs = local_dataset_ls[i].train_set_idxs
+    #     elif set == "test":
+    #         local_idxs = local_dataset_ls[i].test_set_idxs
+        
+    #     for idx in  local_idxs:
+    #         rows.append(dataset.df.iloc[idx])
+    
+    # new_dataset = pd.DataFrame(rows)
+    # original_bld_dataset = BinaryLabelDataset(df=new_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+    original_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_Y)
     
     all_prediction =  [pred for ls in prediction_ls for pred in ls]
-    prediction_dataset = new_dataset.copy(deep=True)
-    prediction_dataset[dataset.target] = all_prediction
-    prediction_bld_dataset = BinaryLabelDataset(df=prediction_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+    # prediction_dataset = new_dataset.copy(deep=True)
+    # prediction_dataset[dataset.target] = all_prediction
+    # prediction_bld_dataset = BinaryLabelDataset(df=prediction_dataset, label_names=[dataset.target], protected_attribute_names=[dataset.s_attr])
+    prediction_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_prediction)
 
-
-    privileged_groups = [{dataset.s_attr: 1}]
-    unprivileged_groups = [{dataset.s_attr: 0}]
+    privileged_groups = [{"a": 1}]
+    unprivileged_groups = [{"a": 0}]
     cm_pred = ClassificationMetric(original_bld_dataset, prediction_bld_dataset,
     unprivileged_groups=unprivileged_groups,
     privileged_groups=privileged_groups)

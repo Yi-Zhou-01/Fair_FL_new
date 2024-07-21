@@ -158,7 +158,8 @@ def check_train_test_split(num_clients, pred_train_dic, pred_test_dic, save_dir=
 
     
     # print(pred_test_dic)
-    print(pred_test_dic.keys())
+    # print(pred_test_dic.keys())
+    # print(pred_test_dic)
     lines = []
     for i in range(num_clients):
 

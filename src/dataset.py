@@ -78,34 +78,51 @@ class AdultDataset(Dataset):
 class CompasDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, df=None, crop=None, subset=None):
+    def __init__(self, csv_file, X=None, y=None, a=None, df=None, crop=None, subset=None):
         """Initializes instance of class Compas Dataset.
         """
 
-        if df is not None:
-            self.df = df
-        else:
-            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
-        if crop:
-            self.df = self.df[:crop]
-
-        if subset:
-            self.df = self.df[self.df.index.isin(subset)]
-        
         self.target = "two_year_recid"
         self.s_attr = "sex"
-        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+        self.name = "compas"
 
-        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-        self.X = self.df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
-        self.X = self.standardlize_X(self.X)
-        self.y = self.df[self.target].to_numpy().astype(np.float32)
-        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+        if X is None:
+            if df is not None:
+                df = df
+            else:
+                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            
+            if crop:
+                df = df[:crop]
+
+            if subset:
+                df = df[df.index.isin(subset)]
+            
+
+            # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+            # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+        
+        else:
+            self.X = X.to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
+
+
+        # new_df = pd.DataFrame()
+        # new_df["y"] = self.y
+        # new_df["a"] = self.a
+        # self.bld =  BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
 
         self.size = len(self.y)
 
     def __len__(self):
-        return len(self.df)
+        return len(self.y)
 
     def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
@@ -183,49 +200,65 @@ class WCLDDataset(Dataset):
 class PTBDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
-
-        if df is not None:
-            self.df = df
-        else:
-            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
-            # print("self.df: ", self.df[:5])
-            columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM"]
-            self.df = self.df.loc[:, self.df.columns.isin(columns)]
-        if crop:
-            self.df = self.df[:crop]
-
-        if subset:
-            self.df = self.df[self.df.index.isin(subset)]
-        
         self.target = "NORM"
         self.s_attr = "sex"
-        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+        self.name = "ptb-xl"
 
-        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-        if traces:
-            if "kaggle" in csv_file:
-                path_to_traces = "/kaggle/inpu/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+        if X is None:
+            if df is not None:
+                df = df
             else:
-                path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
-            f = h5py.File(path_to_traces, 'r')
-            self.X = np.array(f["tracings"][:]) 
+                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+                # print("self.df: ", self.df[:5])
+                columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM"]
+                df = df.loc[:, df.columns.isin(columns)]
+            if crop:
+                df = df[:crop]
+
+            if subset:
+                df = df[df.index.isin(subset)]
+            
+
+            # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+            # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+            if traces:
+                if kaggle:
+                    path_to_traces = "/kaggle/input/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+                else:
+                    path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+                f = h5py.File(path_to_traces, 'r')
+                self.X = np.array(f["tracings"][:])
+            else:
+                self.X = df["record_id"].to_numpy().astype(np.float32)
+            
+
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+
+            # self.X = self.standardlize_X(self.X)
+            
+
+
         else:
-            self.X = self.df["record_id"].to_numpy().astype(np.float32)
+            if isinstance(X,(np.ndarray)):
+                self.X = X.astype(np.float32)
+            else:
+                self.X = X.to_numpy().astype(np.float32)
+            # self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
 
-        self.y = self.df[self.target].to_numpy().astype(np.float32)
-        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
-
-        # self.X = self.standardlize_X(self.X)
         self.size = len(self.y)
 
         # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
         # y = torch.from_numpy(y).type(torch.float)
 
     def __len__(self):
-        return len(self.df)
+        return len(self.y)
 
     def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
@@ -238,11 +271,16 @@ class PTBDataset(Dataset):
             return [self.X[idx], self.y[idx]]
 
 
-def get_bld_dataset_w_pred(test_dataset, prediction_test):
-    new_df = test_dataset.df.copy(deep=True)
-    new_df[test_dataset.target] = prediction_test
+def get_bld_dataset_w_pred(a, pred_labels):
+
+    new_df = pd.DataFrame()
+    # new_df["X"] = X
+    new_df["a"] = list(a)
+    new_df["y"] =  list(pred_labels)
+    # new_df = test_dataset.df.copy(deep=True)
+    # new_df[test_dataset.target] = prediction_test
     # print("Check sum prediction equal: ", sum(prediction_test), sum(new_df[test_dataset.target]))
-    return BinaryLabelDataset(df=new_df, label_names=[test_dataset.target], protected_attribute_names=[test_dataset.s_attr])
+    return BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
 
 
 # def df_to_dataset(df, dataset_name="adult"):
@@ -312,7 +350,7 @@ def get_dataset(args):
 
         csv_file_train = data_path+'/ptb-xl/ptbxl_all_clean_new.csv'
 
-        train_dataset = PTBDataset(csv_file_train)
+        train_dataset = PTBDataset(csv_file_train, kaggle=args.kaggle)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
@@ -374,15 +412,15 @@ def get_dataset(args):
     return train_dataset, test_dataset, user_groups
 
 
-def get_dataset_from_df(dataset_name, df):
-    """ Returns Dataset object
-    """
+# def get_dataset_from_df(dataset_name, df, kaggle):
+#     """ Returns Dataset object
+#     """
 
-    if  dataset_name == 'adult':
-        return AdultDataset(csv_file="", df=df)
-    elif  dataset_name == 'compas':
-        return CompasDataset(csv_file="", df=df)
-    elif  dataset_name == 'wcld':
-        return WCLDDataset(csv_file="", df=df)
-    elif  dataset_name == 'ptb-xl':
-        return PTBDataset(csv_file="", df=df)
+#     if  dataset_name == 'adult':
+#         return AdultDataset(csv_file="", df=df)
+#     elif  dataset_name == 'compas':
+#         return CompasDataset(csv_file="", df=df)
+#     elif  dataset_name == 'wcld':
+#         return WCLDDataset(csv_file="", df=df)
+#     elif  dataset_name == 'ptb-xl':
+#         return PTBDataset(csv_file="", df=df,  kaggle=kaggle)
