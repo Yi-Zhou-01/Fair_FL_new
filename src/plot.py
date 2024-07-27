@@ -154,7 +154,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
     else:
         fig, ((ax1, ax2), (ax4, ax5) ) = plt.subplots(2, 2,figsize=(12, 10))
 
-    x = [x + 1 for x in list(range(len(stat_dic['train_acc_new'])))] 
+    x = [x + 1 for x in list(range(args.num_users))] 
     y_lim = [-0.05, 1.0]
 
     if title:
@@ -352,6 +352,7 @@ def plot_loss(local_loss_all, train_loss, new=True, plot_tpfp=True, title=None, 
     # ax1.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     # ax1.set_title('Accuracy & EOD - Test')
     # ax1.legend(loc="upper right")
+    print("Plot finish")
 
 
     if save_to:

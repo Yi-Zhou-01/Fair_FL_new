@@ -9,6 +9,7 @@ import dataset
 import pandas as pd
 import torch.nn.functional as F
 import utils
+import sys
 
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
@@ -17,6 +18,7 @@ from aif360.datasets import BinaryLabelDataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 
+from memory_profiler import profile
 
 class DatasetSplit(Dataset):
     """An abstract Dataset class wrapped around Pytorch Dataset class.
@@ -414,6 +416,73 @@ class LocalUpdate(object):
         # print("Inference pred labels: ", correct, "/", total, sum(labels))
         accuracy = correct/total
         return accuracy, loss
+    
+    # @profile
+    def inference_w_fairness(self, model, set="test", fairness_metric=["eod"]):
+        """ Returns the inference accuracy and loss of local test data (?). 
+        """
+
+        model.eval()
+        loss, total, correct = 0.0, 0.0, 0.0
+
+
+        all_y = np.array([])
+        all_a = np.array([])
+        all_pred = np.array([])
+
+        if set == "test":
+            loader = self.testloader
+        elif set == "val":
+            loader = self.testloader
+        else:
+            loader = self.trainloader
+
+        for batch_idx, (images, labels, a) in enumerate(loader):
+        # for batch_idx, (images, labels) in enumerate(self.testloader):
+            images, labels, a = images.to(self.device), labels.to(self.device),  a.to(self.device)
+
+            outputs = model(images).squeeze()
+            outputs = outputs.reshape(-1)
+
+            batch_loss = self.criterion(outputs, labels)
+            loss += batch_loss.item()
+
+            pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+            pred_labels = pred_labels.view(-1)
+            correct += torch.sum(torch.eq(pred_labels, labels)).item()
+            total += len(labels)
+            all_y = np.append(all_y, labels)
+            all_a = np.append(all_a, a)
+            all_pred = np.append(all_pred, pred_labels)
+        
+
+        train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(all_a, all_pred)
+        original_bld = dataset.get_bld_dataset_w_pred(all_a, all_y)
+                    
+        # privileged_groups = [{s_attr: 1}]
+        # unprivileged_groups = [{s_attr: 0}]
+        privileged_groups = [{"a": 1}]
+        unprivileged_groups = [{"a": 0}]
+        cm_pred_train = ClassificationMetric(original_bld, train_bld_prediction_dataset,
+        unprivileged_groups=unprivileged_groups,
+        privileged_groups=privileged_groups)
+
+        accuracy = cm_pred_train.accuracy()
+        # print("accuracy: ", accuracy.size, sys.getsizeof(accuracy))
+        local_fairness = {}
+        if "eod" in fairness_metric:
+            local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
+            # local_fairness["eod"] = (cm_pred_train.average_abs_odds_difference())
+        if "tpr" in fairness_metric:
+            local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
+        if "fpr" in fairness_metric:
+            local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
+
+
+
+        # print("Inference pred labels: ", correct, "/", total, sum(labels))
+        accuracy = correct/total
+        return accuracy, loss, all_y, all_a, all_pred, local_fairness
 
 def test_inference(args, model, test_dataset):
     """ Returns the test accuracy and loss.
@@ -476,7 +545,10 @@ def get_prediction(args, model, X, Y):
 
     return pred_labels, accuracy
 
-
+# instantiating the decorator
+# @profile
+# code for which memory has to
+# be monitored
 def get_prediction_w_local_fairness(gpu, model, X, Y, a, fairness_metric=["eod"]):
     
     """ Returns the test accuracy and loss.
@@ -489,13 +561,20 @@ def get_prediction_w_local_fairness(gpu, model, X, Y, a, fairness_metric=["eod"]
     X_tensor = torch.tensor(X)
     Y_tensor  = torch.tensor(Y)
     # s_attr_ls = list(test_dataset.df[test_dataset.s_attr])
-    s_attr_ls = a
+    s_attr_ls = np.array(a)
+    print("s_attr_ls: ", s_attr_ls.size, sys.getsizeof(s_attr_ls), type(s_attr_ls))
+    s_attr_ls = torch.tensor(a)
+    print("s_attr_ls: ", s_attr_ls.size(), sys.getsizeof(s_attr_ls), type(s_attr_ls))
     images, labels = X_tensor.to(device), Y_tensor.to(device)
     outputs = model(images).squeeze()
+    # print("images, labels, outputs : ", len(images), len(labels), len(outputs))
+    print("labels: ", labels.size(), sys.getsizeof(labels), type(labels))
     # pred_labels = [ int(pred >= 0.5) for pred in outputs]
   
     pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+    print("pred_labels: ", pred_labels.size())
     pred_labels = pred_labels.view(-1)
+    print("pred_labels2: ", pred_labels.size(), sys.getsizeof(pred_labels))
     # print("Len of pred_labels set: ", len(pred_labels))
     # print(pred_labels)
 
@@ -511,6 +590,7 @@ def get_prediction_w_local_fairness(gpu, model, X, Y, a, fairness_metric=["eod"]
     privileged_groups=privileged_groups)
 
     accuracy = cm_pred_train.accuracy()
+    print("accuracy: ", accuracy.size, sys.getsizeof(accuracy))
     local_fairness = {}
     if "eod" in fairness_metric:
         local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
@@ -519,15 +599,31 @@ def get_prediction_w_local_fairness(gpu, model, X, Y, a, fairness_metric=["eod"]
         local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
     if "fpr" in fairness_metric:
         local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
+    
+    print("local_fairness: ", sys.getsizeof(local_fairness))
 
 
     # correct = torch.sum(torch.eq(pred_labels, labels)).item()
     # print("predicted 1s / real 1s/ sample size: ", torch.sum(pred_labels), " / ", torch.sum(labels) ," / ", len(pred_labels))
     # accuracy = correct/len(pred_labels)
 
+    check_ls = [pred_labels, accuracy, local_fairness, labels, s_attr_ls]
+    print("all return mem:", sum([sys.getsizeof(it) for it in check_ls]))
+    for it in check_ls:
+    #     print("data type: ", type(it))
+        print("mem size: ", sys.getsizeof(it))
+    #     if not isinstance(it,dict):
+    #         print("size: ", it.size)
+
+
     return pred_labels, accuracy, local_fairness, labels, s_attr_ls
 
 
+
+# instantiating the decorator
+# @profile
+# code for which memory has to
+# be monitored
 def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gpu, kaggle, set="test", fairness_metric=["eod"], return_label=False):
     local_fairness_ls = {}
     local_acc_ls = []
@@ -544,11 +640,16 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
     for i in range(num_users):
         if set == "test":
             # local_set_df = local_set_ls[i].test_set
+            print("Test local set")
+            print("len y, a : ", len(local_set_ls[i].local_test_set.y), len(local_set_ls[i].local_test_set.a))
+            print("type of a: *** ", type(local_set_ls[i].local_test_set.a))
             pred_labels, accuracy, local_fairness, labels, s_attr = \
                 get_prediction_w_local_fairness(gpu, global_model, local_set_ls[i].local_test_set.X, local_set_ls[i].local_test_set.y, local_set_ls[i].local_test_set.a, \
                                                  fairness_metric=fairness_metric)
         elif set == "train":
             # local_set_df = local_set_ls[i].train_set
+            print("Train local set")
+            print("len y, a : ", len(local_set_ls[i].local_train_set.y), len(local_set_ls[i].local_train_set.a))
             pred_labels, accuracy, local_fairness, labels, s_attr = \
                 get_prediction_w_local_fairness(gpu, global_model, local_set_ls[i].local_train_set.X, local_set_ls[i].local_train_set.y, local_set_ls[i].local_train_set.a, \
                                                   fairness_metric=fairness_metric)
@@ -570,7 +671,7 @@ def get_all_local_metrics(datasetname, num_users, global_model, local_set_ls, gp
         if return_label:
             pred_labels_ls.append(pred_labels)
             labels_ls.append(labels)
-            s_attr_ls.append(torch.tensor(s_attr))
+            s_attr_ls.append((s_attr))
         if "eod" in fairness_metric:
             local_fairness_ls["eod"].append(local_fairness["eod"])
         if "tpr" in fairness_metric:
@@ -632,3 +733,27 @@ def get_global_fairness(local_dataset_ls, prediction_ls, metric="eod", set="trai
   
 
 # def get_weighted_metric_gap(sample_size_ls, metric_gap):
+
+
+def get_global_fairness_new(local_a_ls, local_y_ls, prediction_ls, metric="eod", set="train"):
+
+    all_a = np.asarray(local_a_ls).flatten()
+    all_y = np.asarray(local_y_ls).flatten()
+    all_prediction =np.asarray(prediction_ls).flatten()
+
+    original_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_y)
+    prediction_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_prediction)
+
+    privileged_groups = [{"a": 1}]
+    unprivileged_groups = [{"a": 0}]
+
+    cm_pred = ClassificationMetric(original_bld_dataset, prediction_bld_dataset,
+    unprivileged_groups=unprivileged_groups,
+    privileged_groups=privileged_groups)
+
+    accuracy = cm_pred.accuracy()
+    if metric == "eod":
+        # fairness = cm_pred.average_abs_odds_difference()
+        fairness = cm_pred.equalized_odds_difference()    
+
+    return accuracy, fairness

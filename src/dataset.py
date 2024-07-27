@@ -211,7 +211,7 @@ class PTBDataset(Dataset):
             if df is not None:
                 df = df
             else:
-                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+                df = pd.read_csv(csv_file, index_col=False)#[:1000] #.drop("Unnamed: 0", axis=1)
                 # print("self.df: ", self.df[:5])
                 columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM"]
                 df = df.loc[:, df.columns.isin(columns)]
@@ -231,7 +231,7 @@ class PTBDataset(Dataset):
                 else:
                     path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
                 f = h5py.File(path_to_traces, 'r')
-                self.X = np.array(f["tracings"][:])
+                self.X = np.array(f["tracings"][:])#[:1000] 
             else:
                 self.X = df["record_id"].to_numpy().astype(np.float32)
             
