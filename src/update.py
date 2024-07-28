@@ -18,7 +18,7 @@ from aif360.datasets import BinaryLabelDataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-from memory_profiler import profile
+# from memory_profiler import profile
 
 class DatasetSplit(Dataset):
     """An abstract Dataset class wrapped around Pytorch Dataset class.
@@ -269,7 +269,7 @@ class LocalUpdate(object):
             batch_loss_fairness = []
             batch_loss_1 = []
             for batch_idx, (images, labels, a) in enumerate(self.trainloader):
-                images, labels = images.to(self.device), labels.to(self.device)
+                images, labels, a = images.to(self.device), labels.to(self.device), a.to(self.device)
                 # model.zero_grad()
                 optimizer.zero_grad()  
 
@@ -280,9 +280,13 @@ class LocalUpdate(object):
                 # eod_loss = utils.equalized_odds_diff(softmax[:, -1], labels, a)
 
                 outputs = model.final_layer(model.get_features(images)).squeeze()
-                pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs]).view(-1)
+                # pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs]).view(-1)
+                pred_labels =  (outputs > 0.5).to(torch.float32).view(-1)
+                # print("pred_labels: ", type(pred_labels))
                 eod_loss = utils.equalized_odds_diff(pred_labels, labels, a)
+                # print("eod_loss: ", type(eod_loss))
                 loss_1 = self.criterion(outputs, labels)
+                # print("loss_1: ", type(loss_1))
                 
                 # print("outputs: ", outputs.shape, outputs)
                 
@@ -302,6 +306,7 @@ class LocalUpdate(object):
                 # loss = loss_1*0.005 + self.args.ft_alpha * eod_loss
                 # loss = loss_1 + self.args.ft_alpha * eod_loss
                 loss = loss_1*0 + self.args.ft_alpha * eod_loss
+                # print("loss: ", type(loss))
                 # loss = eod_loss
 
                 loss.backward(retain_graph=True)
@@ -447,13 +452,14 @@ class LocalUpdate(object):
             batch_loss = self.criterion(outputs, labels)
             loss += batch_loss.item()
 
-            pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+            # pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+            pred_labels = (outputs > 0.5).to(torch.float32)
             pred_labels = pred_labels.view(-1)
             correct += torch.sum(torch.eq(pred_labels, labels)).item()
             total += len(labels)
-            all_y = np.append(all_y, labels)
-            all_a = np.append(all_a, a)
-            all_pred = np.append(all_pred, pred_labels)
+            all_y = np.append(all_y, labels.detach().cpu().numpy())
+            all_a = np.append(all_a, a.detach().cpu().numpy())
+            all_pred = np.append(all_pred, pred_labels.detach().cpu().numpy())
         
 
         train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(all_a, all_pred)

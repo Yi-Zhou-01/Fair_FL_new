@@ -129,7 +129,7 @@ def get_tpr_diff(p, y, a):
 def equalized_odds_diff(p, y, a):
     # return (get_fpr_diff(p, y, a)+get_tpr_diff(p, y, a))
 
-    return max(get_fpr_diff(p, y, a), get_tpr_diff(p, y, a))
+    return torch.max(get_fpr_diff(p, y, a), get_tpr_diff(p, y, a))
 
 # max(np.abs(self.difference(self.false_positive_rate)), 
 #                         np.abs(self.difference(self.true_positive_rate)))

@@ -30,7 +30,7 @@ import pickle
 import utils
 import models
 # import tracemalloc
-from memory_profiler import profile
+# from memory_profiler import profile
 
 
 
@@ -42,7 +42,7 @@ from aif360.algorithms.postprocessing import EqOddsPostprocessing
 # from dataset import get_dataset
 # import dataset
 
-@profile
+# @profile
 def main():
     start_time = time.time()
 
@@ -55,8 +55,8 @@ def main():
 
     # if args.gpu_id:
     #     torch.cuda.set_device(args.gpu_id)
-    if args.gpu:
-        torch.cuda.set_device(args.gpu)
+    # if args.gpu:
+    #     torch.cuda.set_device(args.gpu)
     device = 'cuda' if args.gpu else 'cpu'
 
 
@@ -685,9 +685,9 @@ def main():
 
             for key in new_weights.keys():
                 for idx in range(args.num_users):
-                    new_weights[key] += ((client_update_weight[idx] / np.sum(client_update_weight)) * local_weights[idx][key])
+                    new_weights[key] += ((client_update_weight[idx] / np.sum(client_update_weight)) * local_weights[idx][key].cpu())
 
-
+            # new_weights = new_weights.to(device)
             global_model.load_state_dict(new_weights)
                 # # Compute weighted local weights using FairFed formula
                 # if epoch == 0:
