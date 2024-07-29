@@ -761,9 +761,9 @@ def main():
                 print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
 
 
-        print("all_loss_epoch")
-        print(np.asarray(all_loss_epoch))
-        print(np.asarray(all_loss_epoch).T)
+        # print("all_loss_epoch")
+        # print(np.asarray(all_loss_epoch))
+        # print(np.asarray(all_loss_epoch).T)
         plot_file_loss_fairfed = statistics_dir + "/fairfed_loss_plot.png"
         fig_titl_loss_fairfed = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
         plot.plot_loss_ft(np.asarray(all_loss_epoch), fairfed=True, title=fig_titl_loss_fairfed, save_to=plot_file_loss_fairfed)

@@ -356,10 +356,10 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
         y_lim = [min(epoch_loss[0])-0.1, max(epoch_loss[0])+0.1]
     # y_lim for final_layer fine-tuning
     else:
-        y_lim = [0, 3]
+        y_lim = [min(epoch_loss[0])-0.5, max(epoch_loss[0])+0.5]
 
     if title:
-        fig.suptitle(title, fontsize=16)
+        fig.suptitle(title, fontsize=8)
 
     x1 = list(range(1, len(epoch_loss[0])+1))
     if max(x1)>20:

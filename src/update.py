@@ -120,8 +120,10 @@ class LocalDataset(object):
         # self.local_train_set, self.local_test_set, self.local_val_set=  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
 
 
-        self.local_train_set, self.local_test_set, self.local_val_set, \
-             self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
+        # self.local_train_set, self.local_test_set, self.local_val_set, \
+        #      self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
+        self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
+
 
 
         # self.train_set_X, self.train_set_Y, self.train_set_a, \
@@ -193,7 +195,8 @@ class LocalDataset(object):
             print("!! ERROR: Dataset not implemented in LocalDataset: train_test_split")
 
 
-        return local_train_set, local_test_set, local_val_set, train_set_idxs, test_set_idxs, val_set_idxs
+        # return local_train_set, local_test_set, local_val_set, train_set_idxs, test_set_idxs, val_set_idxs
+        return train_set_idxs, test_set_idxs, val_set_idxs
     # X_train.values, y_train.values, a_train.values, X_test.values, y_test.values, a_test.values, X_val.values, y_val.values, a_val.values, \
             # list(X_train.index), list(X_test.index), list(X_val.index)
 
