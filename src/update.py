@@ -332,7 +332,7 @@ class LocalUpdate(object):
     
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
 
-        return model.state_dict(), sum(epoch_loss) / len(epoch_loss)
+        return model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
 
 
     def update_weights(self, model, global_round):

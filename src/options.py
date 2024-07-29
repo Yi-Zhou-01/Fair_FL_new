@@ -92,6 +92,8 @@ def args_parser():
     parser.add_argument('--local_split', type=str, default="", help='File path if use saved local client train/test split; Empty if want a newly generated one.')
     
     parser.add_argument('--kaggle', type=bool, default=False, help='if runs on kaggle')
+
+    parser.add_argument('--rep', type=int, default=0, help='run exp with the same setting with # of rep')
     
 
     args = parser.parse_args()

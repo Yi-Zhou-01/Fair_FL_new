@@ -71,9 +71,9 @@ def main():
         all_fl = all_fl + "new"
     if args.fl_fairfed:
         all_fl = all_fl + "fairfed"    
-    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
+    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_{}'.\
         format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
-               args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
+               args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.rep)    # <------------- iid tobeadded
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
@@ -538,6 +538,7 @@ def main():
             for k in ft_keys:
                 stat_dic[k] = np.zeros(args.num_users) 
 
+            all_epoch_loss = []
             for c in range(args.num_users):
                 local_dataset = local_set_ls[c]
                 split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
@@ -545,8 +546,11 @@ def main():
                                         idxs=user_groups[idx], logger=logger)
 
                 local_train_model = copy.deepcopy(global_model)
-                weights, loss = local_model.update_final_layer(
+                weights, loss, epoch_loss = local_model.update_final_layer(
                     model=local_train_model, global_round=epoch)
+                
+                all_epoch_loss.append(epoch_loss)
+                # print("ep loss: ", epoch_loss)
                 
                 local_train_model.load_state_dict(weights)
 
@@ -579,8 +583,16 @@ def main():
                 stat_dic['train_tpr_new_ft'][c] = (local_fairness["tpr"])
                 stat_dic['train_fpr_new_ft'][c] = (local_fairness["fpr"])
 
+            all_epoch_loss = np.asarray(all_epoch_loss)
+            # print("all_epoch_loss: ", all_epoch_loss.size, len(all_epoch_loss))
+            # print(all_epoch_loss)
+
+            plot_file_loss_ft = statistics_dir + "/ft_loss_plot.png"
+            fig_titl_loss_ft = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
+
+            plot.plot_loss_ft((all_epoch_loss), title=fig_titl_loss_ft, save_to=plot_file_loss_ft)
+                    
                 
-              
 
 
         # print("Test Acc ...")
@@ -604,8 +616,8 @@ def main():
         # # print(stat_dic['train_fpr_after'])
         
         
-        print("stats dic: ")
-        print(stat_dic)
+        # print("stats dic: ")
+        # print(stat_dic)
     
     
     if args.fl_fairfed:
@@ -623,6 +635,7 @@ def main():
 
         # For each (global) round of training
         # local_weights_fair = []
+        all_loss_epoch = []
         for epoch in tqdm(range(args.fairfed_ep)):
             local_losses = []
             local_weights, local_losses = [], []
@@ -733,8 +746,13 @@ def main():
 
                 list_acc.append(acc)
                 list_loss.append(loss)
-
+                
             train_accuracy.append(sum(list_acc)/len(list_acc))
+            all_loss_epoch.append((train_loss))
+            # print("all_loss_epoch")
+            # print(all_loss_epoch)
+
+            
 
             # print global training loss after every 'i' rounds
             if (epoch+1) % print_every == 0:
@@ -742,19 +760,27 @@ def main():
                 print(f'Training Loss : {np.mean(np.array(train_loss))}')
                 print('Train Accuracy: {:.2f}% \n'.format(100*train_accuracy[-1]))
 
-            
-            for c in range(args.num_users):
-                local_dataset = local_set_ls[c]
-                split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
-                local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
-                                        idxs=user_groups[idx], logger=logger)
 
-                # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
-                #                         idxs=user_groups[idx], logger=logger)
-                
-                acc, _, all_y, all_a, all_pred, local_fairness = local_model.inference_w_fairness(model=global_model, set="test", fairness_metric="eod")
-                stat_dic["test_acc_fairfed"][c] = acc
-                stat_dic["test_eod_fairfed"][c] = local_fairness["eod"]
+        print("all_loss_epoch")
+        print(np.asarray(all_loss_epoch))
+        print(np.asarray(all_loss_epoch).T)
+        plot_file_loss_fairfed = statistics_dir + "/fairfed_loss_plot.png"
+        fig_titl_loss_fairfed = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
+        plot.plot_loss_ft(np.asarray(all_loss_epoch), fairfed=True, title=fig_titl_loss_fairfed, save_to=plot_file_loss_fairfed)
+        
+
+        for c in range(args.num_users):
+            local_dataset = local_set_ls[c]
+            split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
+            local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
+                                    idxs=user_groups[idx], logger=logger)
+
+            # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
+            #                         idxs=user_groups[idx], logger=logger)
+            
+            acc, _, all_y, all_a, all_pred, local_fairness = local_model.inference_w_fairness(model=global_model, set="test", fairness_metric="eod")
+            stat_dic["test_acc_fairfed"][c] = acc
+            stat_dic["test_eod_fairfed"][c] = local_fairness["eod"]
 
 
         

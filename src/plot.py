@@ -302,7 +302,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
 def plot_loss(local_loss_all, train_loss, new=True, plot_tpfp=True, title=None, save_to=None):
     
     local_loss_all_T = np.array(local_loss_all).transpose()
-    print("Check shape: ", np.array(local_loss_all).shape, local_loss_all_T.shape)
+    # print("Check shape: ", np.array(local_loss_all).shape, local_loss_all_T.shape)
 
     
     fig, ((ax1, ax2)) = plt.subplots(1, 2,figsize=(12, 6))
@@ -311,47 +311,69 @@ def plot_loss(local_loss_all, train_loss, new=True, plot_tpfp=True, title=None, 
         fig.suptitle(title, fontsize=16)
 
 
-    x1 = list(range(1, len(train_loss) + 1))
+    
 
-    ax1.plot(x1, train_loss, color='blue', marker='o',  label='train_loss')
-    ax1.legend(loc="upper right")
-    ax1.set_xlabel("Epoch")
-    ax1.set_ylabel("Loss")
-    ax1.set_title('train_loss')
+    if train_loss is not None:
+        x1 = list(range(1, len(train_loss) + 1))
+        ax1.plot(x1, train_loss, color='blue', marker='o',  label='train_loss')
+        ax1.legend(loc="upper right")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Loss")
+        ax1.set_title('train_loss')
+        if max(x1)>20:
+            step = 2
+        else:
+            step = 1
+        ax1.set_xticks(np.arange(min(x1), max(x1)+1, step))
+        ax1.grid()
+
+    if local_loss_all is not None:
+        x2 = list(range(1, len(local_loss_all_T[0])+1))
+        if max(x2)>20:
+            step = 2
+        else:
+            step = 1
+        for i in range(len(local_loss_all_T)):
+            ax2.plot(x2, local_loss_all_T[i], marker='o',  label= ('random client '+str(i+1)))
+        
+        ax2.legend(loc="upper right")
+        ax2.set_xticks(np.arange(min(x2), max(x2)+1, step))
+
+    print("Plot finish")
+
+
+    if save_to:
+        plt.savefig(save_to)
+    else:
+        plt.show()
+
+
+def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
+    
+    
+    fig, axs = plt.subplots(2, 2,figsize=(8, 6))
+    if fairfed:
+        y_lim = [min(epoch_loss[0])-0.1, max(epoch_loss[0])+0.1]
+    # y_lim for final_layer fine-tuning
+    else:
+        y_lim = [0, 3]
+
+    if title:
+        fig.suptitle(title, fontsize=16)
+
+    x1 = list(range(1, len(epoch_loss[0])+1))
     if max(x1)>20:
         step = 2
     else:
         step = 1
-    ax1.set_xticks(np.arange(min(x1), max(x1)+1, step))
-    ax1.grid()
 
-    x2 = list(range(1, len(local_loss_all_T[0])+1))
-    for i in range(len(local_loss_all_T)):
-        ax2.plot(x2, local_loss_all_T[i], marker='o',  label= ('random client '+str(i+1)))
+    for i, ax in enumerate(axs.ravel()):
+        ax.plot(x1, epoch_loss[i], marker='o',  label= ('random client '+str(i+1)))
     
-    ax2.legend(loc="upper right")
-    ax2.set_xticks(np.arange(min(x2), max(x2)+1, step))
+        ax.legend(loc="upper right")
+        ax.set_xticks(np.arange(min(x1), max(x1)+1, step))
+        ax.set_ylim(y_lim)
 
-
-
-
-    # x = [x + 1 for x in list(range(len(stat_dic['train_acc_new'])))] 
-    # y_lim = [-0.05, 1.0]
-
-
-    # ax1.axhline(0.8, color='lightsteelblue', alpha=0.6)
-    # ax1.axhline(0.1, color='orange', alpha=0.4)
-    # ax1.plot(x, stat_dic['test_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
-    # ax1.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
-    # ax1.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
-    # ax1.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
-    # ax1.set_ylim(y_lim)
-    
-
-    # ax1.set_xlabel("Client ID")
-    # ax1.set_xticks(np.arange(min(x), max(x)+1, 1.0))
-    # ax1.set_title('Accuracy & EOD - Test')
-    # ax1.legend(loc="upper right")
     print("Plot finish")
 
 
