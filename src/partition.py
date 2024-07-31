@@ -41,7 +41,7 @@ def dirichlet_sampling(dataset, num_clients, alpha, attr, ratio=None):
 
     # if dirichlet:
     # attr = dataset.target
-    train_labels = dataset.df[attr].to_numpy().astype(np.float32)
+    train_labels = dataset.y.astype(np.float32)
     n_classes = len(set(train_labels))
 
     label_distribution = np.random.dirichlet([alpha]*num_clients, n_classes)

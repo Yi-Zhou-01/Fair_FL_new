@@ -47,7 +47,7 @@ class MLP(nn.Module):
 class MLPAdult(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out):
         super(MLPAdult, self).__init__()
-        self.layer_1 = nn.Linear(in_features=32, out_features=64)
+        self.layer_1 = nn.Linear(in_features=dim_in, out_features=64)
         self.layer_2 = nn.Linear(in_features=64, out_features=128)
         self.layer_3 = nn.Linear(in_features=128, out_features=64)
         self.layer_4 = nn.Linear(in_features=64, out_features=1)
@@ -68,7 +68,7 @@ class MLPAdult2(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out):
         super(MLPAdult2, self).__init__()
         self.mlp = nn.Sequential(
-            nn.Linear(in_features=32, out_features=64),
+            nn.Linear(in_features=dim_in, out_features=64),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(in_features=64, out_features=128), 

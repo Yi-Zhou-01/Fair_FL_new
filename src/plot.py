@@ -362,7 +362,9 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
         fig.suptitle(title, fontsize=8)
 
     x1 = list(range(1, len(epoch_loss[0])+1))
-    if max(x1)>20:
+    if max(x1)>39:
+        step = 4
+    elif max(x1)>20:
         step = 2
     else:
         step = 1

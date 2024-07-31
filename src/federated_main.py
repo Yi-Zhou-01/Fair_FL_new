@@ -166,7 +166,10 @@ def main():
                                 dim_out=args.num_classes)
     elif args.model == 'plain':
         if args.dataset == 'adult':
-            len_in = 32
+            img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
             global_model = Plain_LR_Adult(dim_in=len_in)
         elif args.dataset == 'compas':
             img_size = train_dataset[0][0].shape

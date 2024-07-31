@@ -18,37 +18,43 @@ import h5py
 class AdultDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, df=None, crop=None, subset=None):
+    def __init__(self, csv_file, X=None, y=None, a=None, df=None, crop=None, subset=None):
         """Initializes instance of Adult dataset.
         """
-
-        if df is not None:
-            self.df = df
-        else:
-            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
-        if crop:
-            self.df = self.df[:crop]
-
-        if subset:
-            self.df = self.df[self.df.index.isin(subset)]
-
         self.target = "income"
         self.s_attr = "sex_1"
-        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+        self.name = "adult"
 
-        # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-        self.X = self.df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
-        self.y = self.df[self.target].to_numpy().astype(np.float32)
-        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+        if X is None:
+            if df is not None:
+                df = df
+            else:
+                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            if crop:
+                df = df[:crop]
 
-        self.X = self.standardlize_X(self.X)
+            if subset:
+                df = df[df.index.isin(subset)]
+
+            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+
+        else:
+            self.X = X.to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
+
+
         self.size = len(self.y)
 
         # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
         # y = torch.from_numpy(y).type(torch.float)
 
     def __len__(self):
-        return len(self.df)
+        return len(self.y)
 
     def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
@@ -62,7 +68,8 @@ class AdultDataset(Dataset):
     def standardlize_X(self, X_data):
         # Define the columns to standardize
         # columns_to_standardize = [28, 29, 30, 31, 32, 33]
-        columns_to_standardize = [26, 27, 28, 29, 30, 31]
+        # columns_to_standardize = [26, 27, 28, 29, 30, 31]
+        columns_to_standardize = list(range(25, len(self.X[0])))
         scaler = StandardScaler()
         scaler.fit(X_data[:, columns_to_standardize])
         X_data[:, columns_to_standardize] = scaler.transform(X_data[:, columns_to_standardize])
@@ -149,33 +156,40 @@ class CompasDataset(Dataset):
 class WCLDDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, df=None, crop=None, subset=None):
+    def __init__(self, csv_file, X=None, y=None, a=None, df=None, crop=None, subset=None):
         """Initializes instance of class Compas Dataset.
         """
 
-        if df is not None:
-            self.df = df
-        else:
-            self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
-        if crop:
-            self.df = self.df[:crop]
-
-        if subset:
-            self.df = self.df[self.df.index.isin(subset)]
-        
         self.target = "recid_180d"
         self.s_attr = "sex"
-        self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+        self.name = "wcld"
 
-        self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-        self.X = self.standardlize_X(self.X)
-        self.y = self.df[self.target].to_numpy().astype(np.float32)
-        self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+        if X is None:
+            if df is not None:
+                df = df
+            else:
+                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            if crop:
+                df = df[:crop]
+            if subset:
+                df = df[df.index.isin(subset)]
+        
+            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+        
+
+        else:
+            self.X = X.to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
 
         self.size = len(self.y)
 
     def __len__(self):
-        return len(self.df)
+        return len(self.y)
 
     def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
