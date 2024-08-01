@@ -147,7 +147,7 @@ class LocalDataset(object):
         # y = self.local_dataset[self.target_label]
         # a = self.local_dataset[self.s_attr]
 
-        if name == "ptb-xl":
+        if name == "ptb-xl" or "nih-chest":
             dummy_X = np.array(range(len(X)))
             X_train, X_test, y_train, y_test, a_train, a_test  = train_test_split(pd.DataFrame(dummy_X), pd.DataFrame(y), pd.DataFrame(a), test_size=self.test_ratio, stratify=y)
             X_val = X_test
@@ -181,18 +181,21 @@ class LocalDataset(object):
         # a_val = a_test
         # y_val = y_test
 
-        if name == "compas":
-            local_train_set = dataset.CompasDataset(csv_file="", X=X_train, y=y_train,a=a_train)
-            local_test_set = dataset.CompasDataset(csv_file="", X=X_test, y=y_test,a=a_test)
-            local_val_set = local_test_set
-        elif name == "ptb-xl":
-            # print("train shape before", X_train.shape)
-            local_train_set = dataset.PTBDataset(csv_file="", X=X_train, y=y_train,a=a_train)
-            # print("train shape after", local_train_set.X.shape)
-            local_test_set = dataset.PTBDataset(csv_file="", X=X_test, y=y_test,a=a_test)
-            local_val_set = local_test_set
-        else:
-            print("!! ERROR: Dataset not implemented in LocalDataset: train_test_split")
+        # if name == "compas":
+        #     local_train_set = dataset.CompasDataset(csv_file="", X=X_train, y=y_train,a=a_train)
+        #     local_test_set = dataset.CompasDataset(csv_file="", X=X_test, y=y_test,a=a_test)
+        #     local_val_set = local_test_set
+        # elif name == "ptb-xl":
+        #     # print("train shape before", X_train.shape)
+        #     local_train_set = dataset.PTBDataset(csv_file="", X=X_train, y=y_train,a=a_train)
+        #     # print("train shape after", local_train_set.X.shape)
+        #     local_test_set = dataset.PTBDataset(csv_file="", X=X_test, y=y_test,a=a_test)
+        #     local_val_set = local_test_set
+        # elif name == "nih-chest":
+        #     # print("train shape before", X_train.shape)
+        #     local_train_set = dataset.NIHDataset(csv_file="", X=X_train, y=y_train,a=a_train)
+        # else:
+        #     print("!! ERROR: Dataset not implemented in LocalDataset: train_test_split")
 
 
         # return local_train_set, local_test_set, local_val_set, train_set_idxs, test_set_idxs, val_set_idxs

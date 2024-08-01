@@ -118,6 +118,23 @@ def main():
                         n_classes=N_CLASSES,
                         kernel_size=kernel_size,
                         dropout_rate=dropout_rate)
+    
+    elif args.dataset == 'nih-chest':
+        N_CLASSES = 1  # just the age
+        seq_length = 256
+        # net_filter_size=[64, 128, 196, 256, 320]
+        # net_seq_lengh=[4096, 1024, 256, 64, 16]
+        net_filter_size=[32, 64, 128, 196, 256]
+        # net_seq_lengh=[1024, 512, 256, 64, 16]
+        net_seq_lengh=[256, 128, 64, 32, 16]
+        dropout_rate=0.8
+        kernel_size=17
+        global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
+                blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+                n_classes=N_CLASSES,
+                kernel_size=kernel_size,
+                dropout_rate=dropout_rate)
+
         
     elif args.model == 'cnn':
         # Convolutional neural netork
@@ -308,6 +325,15 @@ def main():
                 list_loss.append(loss)
             train_accuracy.append(sum(list_acc)/len(list_acc))
 
+            pred_train_dic["pred_labels_fedavg"] = []
+            pred_train_dic["labels"] = []
+            pred_train_dic["s_attr"] = []
+            pred_train_dic["pred_labels_fedavg"] = torch.Tensor(all_local_train_pred)
+            pred_train_dic["labels"] = torch.Tensor(all_local_train_y)
+            pred_train_dic["s_attr"] =torch.Tensor(all_local_train_a)
+
+
+
             # print global training loss after every 'i' rounds
             if (epoch+1) % print_every == 0:
                 print(f' \nAvg Training Stats after {epoch+1} global rounds:')
@@ -338,7 +364,13 @@ def main():
                 all_local_test_a.append(all_a)
                 all_local_test_pred.append(all_pred)
 
-            
+            pred_test_dic["pred_labels_fedavg"] = []
+            pred_test_dic["labels"] = []
+            pred_test_dic["s_attr"] = []
+            pred_test_dic["pred_labels_fedavg"] = torch.Tensor(all_local_test_pred)
+            pred_test_dic["labels"] = torch.Tensor(all_local_test_y)
+            pred_test_dic["s_attr"] =  torch.Tensor(all_local_test_a)
+
             print("---- stat_dic ----")
             print(stat_dic["test_acc_fedavg"])
 
@@ -444,8 +476,8 @@ def main():
         if "pp" in args.debias:
             # Apply post-processing locally at each client:
             print("******** Start post-processing ******** ")
-            # pred_train_dic['pred_labels_pp'] =  np.zeros(args.num_users) 
-            # pred_test_dic['pred_labels_pp'] =  np.zeros(args.num_users) 
+            pred_train_dic['pred_labels_pp'] = [] # np.zeros(args.num_users) 
+            pred_test_dic['pred_labels_pp'] = [] # np.zeros(args.num_users) 
             for idx in range(args.num_users):
                 idxs = user_groups[idx]
                 local_set = local_set_ls[idx]
@@ -498,8 +530,8 @@ def main():
                             privileged_groups=privileged_groups)
                 
                 
-                # pred_train_dic['pred_labels_pp'].append(torch.tensor(local_train_dataset_bld_prediction_debiased.labels.flatten()))
-                # pred_test_dic['pred_labels_pp'].append(torch.tensor(local_test_dataset_bld_prediction_debiased.labels.flatten()))
+                pred_train_dic['pred_labels_pp'].append(torch.tensor(local_train_dataset_bld_prediction_debiased.labels.flatten()))
+                pred_test_dic['pred_labels_pp'].append(torch.tensor(local_test_dataset_bld_prediction_debiased.labels.flatten()))
                 # train_acc_new.append(cm_pred_train_debiased.accuracy())
                 # train_eod_new.append(cm_pred_train_debiased.equalized_odds_difference())
                 stat_dic['train_acc_new'][idx] = (cm_pred_train_debiased.accuracy())
@@ -846,8 +878,8 @@ def main():
     stat_df = pd.DataFrame(stat_dic)
     stat_df.to_csv(statistics_dir + "/stats.csv")
 
-    # with open(statistics_dir+'/client_datasets.pkl', 'wb') as outp:
-    #     pickle.dump(local_set_ls, outp, pickle.HIGHEST_PROTOCOL)
+    with open(statistics_dir+'/client_datasets.pkl', 'wb') as outp:
+        pickle.dump(local_set_ls, outp, pickle.HIGHEST_PROTOCOL)
     
     with open(statistics_dir+'/pred_train_dic.pkl', 'wb') as outp:
         pickle.dump(pred_train_dic, outp, pickle.HIGHEST_PROTOCOL)
@@ -949,7 +981,7 @@ def main():
     # print(train_dataset.a)
     
     # Check statistics of training set
-    # utils.check_train_test_split(args.num_users, pred_train_dic, pred_test_dic, save_dir=statistics_dir)
+    utils.check_train_test_split(args.num_users, pred_train_dic, pred_test_dic, save_dir=statistics_dir)
 
     # print(tracemalloc.get_traced_memory())
 

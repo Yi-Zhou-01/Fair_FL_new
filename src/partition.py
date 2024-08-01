@@ -5,7 +5,7 @@ import random
 import argparse
 import csv
 import matplotlib.pyplot as plt
-from dataset import AdultDataset, CompasDataset, WCLDDataset, PTBDataset
+from dataset import AdultDataset, CompasDataset, WCLDDataset, PTBDataset, NIHDataset
 import json
 
 def iid_sampling(dataset, num_clients):
@@ -113,6 +113,11 @@ if __name__ == '__main__':
         train_data = PTBDataset(csv_file_train, traces=False)
         target_attr = "NORM"
         print("Read from ptb-xl!")
+    elif args.dataset == "nih-chest":
+        csv_file_train = os.getcwd()+"/data/nih-chest/nih_chest_all_clean.csv"
+        train_data = NIHDataset(csv_file_train, traces=False)
+        target_attr = "Diease"
+        print("Read from nih!")
     else:
         print("ERROR: Dataset not found!")
 
