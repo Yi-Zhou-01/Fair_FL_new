@@ -330,6 +330,7 @@ class NIHDataset(Dataset):
             else:
                 self.path_to_traces = None
             
+            
 
             self.X = df["Image Index"].to_numpy()
             self.y = df[self.target].to_numpy().astype(np.float32)
@@ -360,9 +361,8 @@ class NIHDataset(Dataset):
     def __getitem__(self, idx, s_att=True):
         if isinstance(idx, torch.Tensor):
             idx = idx.tolist()
-            print("list index !!")
+            print("list index ")
         # return [self.X.iloc[idx].values, self.y[idx]]
- 
         
         folder_name = self.folder_name[idx]
         img_name = self.X[idx]
@@ -378,6 +378,93 @@ class NIHDataset(Dataset):
             return [img.astype(np.float32), self.y[idx], self.a[idx]]
         else:
             return [img.astype(np.float32), self.y[idx]]
+
+
+class NIHDataset2(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, crop=None, subset=None, traces=True):
+        """Initializes instance of class Compas Dataset.
+        """
+        self.target = "Disease"
+        self.s_attr = "Patient Gender"
+        self.name = "nih-chest"
+
+        if X is None:
+            if df is not None:
+                df = df
+            else:
+                df = pd.read_csv(csv_file, index_col=False)#[:1000] #.drop("Unnamed: 0", axis=1)
+                # print("self.df: ", self.df[:5])
+                columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name"]
+                df = df.loc[:, df.columns.isin(columns)]
+            
+            if not kaggle:
+                crop = 1000
+
+            if crop:
+                df = df[:crop]
+
+            if subset:
+                df = df[df.index.isin(subset)]
+
+            # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+            # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+            if traces:
+                if kaggle:
+                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100%_256_h5.hdf5"
+                else:
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_100%_256_h5.hdf5"
+                f = h5py.File(self.path_to_traces, 'r')
+                self.X = np.array(f["images"][:]).astype(np.float32)[:1000] 
+            else:
+                self.path_to_traces = None
+            
+            # self.X = df["Image Index"].to_numpy()
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+            # self.folder_name = df["folder_name"].to_numpy()
+            # self.X = self.standardlize_X(self.X)
+
+        else:
+            if isinstance(X,(np.ndarray)):
+                self.X = X.astype(np.float32)
+            else:
+                self.X = X.to_numpy().astype(np.float32)
+            # self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
+
+        self.size = len(self.y)
+
+        # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
+        # y = torch.from_numpy(y).type(torch.float)
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+            print("list index ")
+        # return [self.X.iloc[idx].values, self.y[idx]]
+ 
+        
+        # folder_name = self.folder_name[idx]
+        # img_name = self.X[idx]
+        # img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
+        # img_path = self.path_to_traces + "/" +  img_name
+        
+        # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        # img = cv2.imread(img_path)
+        # img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
+
 
 
 
@@ -400,6 +487,10 @@ def get_bld_dataset_w_pred(a, pred_labels):
 #         train_dataset = AdultDataset(csv_file_train)
 
 def get_partition(kaggle, p_idx, dataset="adult"):
+
+    if dataset == "nih-chest-h5":
+        dataset = "nih-chest"
+
     if kaggle:
         path_root = "/kaggle/input/" + dataset + '/partition/' + str(p_idx)
     else:
@@ -466,6 +557,18 @@ def get_dataset(args):
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
+    
+    
+    elif args.dataset == 'nih-chest-h5':
+        # if not args.kaggle:
+        #     data_path = "/Users/zhouyi/Desktop/Msc Project"
+        csv_file_train = data_path+'/nih-chest/nih_chest_all_clean.csv'
+
+        train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle)
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
+        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
+
 
     elif args.dataset == 'nih-chest':
         if not args.kaggle:

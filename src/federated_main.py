@@ -119,7 +119,7 @@ def main():
                         kernel_size=kernel_size,
                         dropout_rate=dropout_rate)
     
-    elif args.dataset == 'nih-chest':
+    elif args.dataset == 'nih-chest' or args.dataset == 'nih-chest-h5':
         N_CLASSES = 1  # just the age
         seq_length = 256
         # net_filter_size=[64, 128, 196, 256, 320]
@@ -129,11 +129,13 @@ def main():
         net_seq_lengh=[256, 128, 64, 32, 16]
         dropout_rate=0.8
         kernel_size=17
-        global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
-                blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
-                n_classes=N_CLASSES,
-                kernel_size=kernel_size,
-                dropout_rate=dropout_rate)
+        global_model = models.VGG(dim_in=(seq_length, seq_length))
+        
+        # global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
+        #         blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+        #         n_classes=N_CLASSES,
+        #         kernel_size=kernel_size,
+        #         dropout_rate=dropout_rate)
 
         
     elif args.model == 'cnn':
