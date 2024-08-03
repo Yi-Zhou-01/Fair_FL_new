@@ -80,11 +80,13 @@ def main():
 
     # load dataset and user groups
     # user groups: different client datasets
+    print("Getting dataset ... ")
     train_dataset, test_dataset, user_groups = dataset.get_dataset(args)
 
     # tracemalloc.start()
 
     # Split train/test for all local dataset
+    print("Getting train/test split ... ")
     if args.local_split == "":
         local_set_ls = []
         for i in range(args.num_users):
@@ -124,12 +126,15 @@ def main():
         seq_length = 256
         # net_filter_size=[64, 128, 196, 256, 320]
         # net_seq_lengh=[4096, 1024, 256, 64, 16]
-        net_filter_size=[32, 64, 128, 196, 256]
-        # net_seq_lengh=[1024, 512, 256, 64, 16]
-        net_seq_lengh=[256, 128, 64, 32, 16]
-        dropout_rate=0.8
-        kernel_size=17
-        global_model = models.VGG(dim_in=(seq_length, seq_length))
+        # net_filter_size=[32, 64, 128, 196, 256]
+        # # net_seq_lengh=[1024, 512, 256, 64, 16]
+        # net_seq_lengh=[256, 128, 64, 32, 16]
+        # dropout_rate=0.8
+        # kernel_size=17
+        if args.model == 'vgg':
+            global_model = models.VGG(dim_in=(seq_length, seq_length))
+        elif args.model == 'mobile':
+            global_model = models.MobileNet(dim_in=(seq_length, seq_length))
         
         # global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
         #         blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
@@ -330,9 +335,9 @@ def main():
             pred_train_dic["pred_labels_fedavg"] = []
             pred_train_dic["labels"] = []
             pred_train_dic["s_attr"] = []
-            pred_train_dic["pred_labels_fedavg"] = torch.Tensor(all_local_train_pred)
-            pred_train_dic["labels"] = torch.Tensor(all_local_train_y)
-            pred_train_dic["s_attr"] =torch.Tensor(all_local_train_a)
+            pred_train_dic["pred_labels_fedavg"] = torch.from_numpy(np.asarray(all_local_train_pred))
+            pred_train_dic["labels"] = torch.from_numpy(np.asarray(all_local_train_y))
+            pred_train_dic["s_attr"] =torch.from_numpy(np.asarray(all_local_train_a))
 
 
 
@@ -369,9 +374,9 @@ def main():
             pred_test_dic["pred_labels_fedavg"] = []
             pred_test_dic["labels"] = []
             pred_test_dic["s_attr"] = []
-            pred_test_dic["pred_labels_fedavg"] = torch.Tensor(all_local_test_pred)
-            pred_test_dic["labels"] = torch.Tensor(all_local_test_y)
-            pred_test_dic["s_attr"] =  torch.Tensor(all_local_test_a)
+            pred_test_dic["pred_labels_fedavg"] = torch.from_numpy(np.asarray(all_local_test_pred))
+            pred_test_dic["labels"] = torch.from_numpy(np.asarray(all_local_test_y))
+            pred_test_dic["s_attr"] =  torch.from_numpy(np.asarray(all_local_test_a))
 
             print("---- stat_dic ----")
             print(stat_dic["test_acc_fedavg"])
@@ -532,8 +537,8 @@ def main():
                             privileged_groups=privileged_groups)
                 
                 
-                pred_train_dic['pred_labels_pp'].append(torch.tensor(local_train_dataset_bld_prediction_debiased.labels.flatten()))
-                pred_test_dic['pred_labels_pp'].append(torch.tensor(local_test_dataset_bld_prediction_debiased.labels.flatten()))
+                pred_train_dic['pred_labels_pp'].append(torch.from_numpy(np.asarray(local_train_dataset_bld_prediction_debiased.labels.flatten())))
+                pred_test_dic['pred_labels_pp'].append(torch.from_numpy(np.asarray(local_test_dataset_bld_prediction_debiased.labels.flatten())))
                 # train_acc_new.append(cm_pred_train_debiased.accuracy())
                 # train_eod_new.append(cm_pred_train_debiased.equalized_odds_difference())
                 stat_dic['train_acc_new'][idx] = (cm_pred_train_debiased.accuracy())
@@ -783,9 +788,11 @@ def main():
 
                 list_acc.append(acc)
                 list_loss.append(loss)
+
+                # all_loss_epoch.append(np.array(list_loss)/len(list_loss))
                 
             train_accuracy.append(sum(list_acc)/len(list_acc))
-            all_loss_epoch.append((train_loss))
+            all_loss_epoch.append(local_losses)
             # print("all_loss_epoch")
             # print(all_loss_epoch)
 
@@ -800,10 +807,11 @@ def main():
 
         # print("all_loss_epoch")
         # print(np.asarray(all_loss_epoch))
-        # print(np.asarray(all_loss_epoch).T)
+        all_loss_epoch = np.asarray(all_loss_epoch).T
+        print(all_loss_epoch)
         plot_file_loss_fairfed = statistics_dir + "/fairfed_loss_plot.png"
         fig_titl_loss_fairfed = statistics_dir.split("/")[-1] + "_exp" + str(args.idx)
-        plot.plot_loss_ft(np.asarray(all_loss_epoch), fairfed=True, title=fig_titl_loss_fairfed, save_to=plot_file_loss_fairfed)
+        plot.plot_loss_ft((all_loss_epoch), fairfed=True, title=fig_titl_loss_fairfed, save_to=plot_file_loss_fairfed)
         
 
         for c in range(args.num_users):

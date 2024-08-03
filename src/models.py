@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Python version: 3.6
 
-from torch import nn
+from torch import nn, sigmoid
 import torch.nn.functional as F
 import numpy as np
 from torchvision import models 
@@ -289,11 +289,15 @@ class VGG(nn.Module):
         self.input_size = dim_in
        
         vgg_model = models.vgg19(weights='IMAGENET1K_V1')
+        # vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
+        
 
         for p in vgg_model.parameters() : 
             p.requires_grad = False 
         
-        IN_FEATURES = vgg_model.classifier[-1].in_features
+        # IN_FEATURES = vgg_model.classifier[-1].in_features
+        IN_FEATURES = 25088
+        # IN_FEATURES = 1280
 
         vgg_model.classifier = nn.Sequential(
       
@@ -332,6 +336,55 @@ class VGG(nn.Module):
             param.requires_grad = True
        
 
+
+class MobileNet(nn.Module):
+    def __init__(self, dim_in):
+        super(MobileNet, self).__init__()
+
+        self.input_size = dim_in
+       
+        # vgg_model = models.vgg19(weights='IMAGENET1K_V1')
+        vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
+        
+
+        for p in vgg_model.parameters() : 
+            p.requires_grad = False 
+        
+        # IN_FEATURES = vgg_model.classifier[-1].in_features
+        # IN_FEATURES = 25088
+        IN_FEATURES = 1280
+
+        vgg_model.classifier = nn.Sequential(
+      
+        nn.Linear(in_features=IN_FEATURES, out_features=512) ,
+        nn.ReLU(),
+        nn.Dropout(p=0.6), 
+        nn.Linear(in_features=512, out_features=256) ,
+        nn.ReLU(),
+        nn.Dropout(p=0.6), 
+        )
+
+        self.features = vgg_model
+
+        self.final_layer = nn.Linear(in_features=256 , out_features=1)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = (self.final_layer(x))
+
+        return x
+
+    def get_features(self, x):
+        return self.features(x)
+    
+    def set_grad(self,val):
+        for param in self.parameters():
+            param.requires_grad = False
+        for param in self.final_layer.parameters():
+            param.requires_grad = True
+
+
+
 class Plain_LR_Adult(nn.Module):
     def __init__(self, dim_in):
         super(Plain_LR_Adult, self).__init__()
@@ -347,7 +400,7 @@ class Plain_LR_Adult(nn.Module):
         # self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.1)
     def forward(self, x):
-        prediction = nn.functional.sigmoid(self.final_layer(x))
+        prediction = sigmoid(self.final_layer(x))
 
         return prediction
 

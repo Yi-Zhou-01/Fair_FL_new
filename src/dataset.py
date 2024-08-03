@@ -15,6 +15,8 @@ from aif360.datasets import BinaryLabelDataset
 
 import h5py
 import cv2
+from torchvision import transforms
+from PIL import Image
 
 class AdultDataset(Dataset):
     """Students Performance dataset."""
@@ -291,12 +293,13 @@ class PTBDataset(Dataset):
 class NIHDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, transform=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
         self.s_attr = "Patient Gender"
         self.name = "nih-chest"
+        self.transform = transform
 
         if X is None:
             if df is not None:
@@ -370,25 +373,32 @@ class NIHDataset(Dataset):
         # img_path = self.path_to_traces + "/" +  img_name
         
         # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-        img = cv2.imread(img_path)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+        # img = cv2.imread(img_path).astype(np.float32)
+        img = Image.open(img_path).convert('RGB')
+
+        # img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+        # img = img.astype(np.float32)/255
+
+        if self.transform:
+            img = self.transform(img)
 
         if s_att:
-            return [img.astype(np.float32), self.y[idx], self.a[idx]]
+            return [img, self.y[idx], self.a[idx]]
         else:
-            return [img.astype(np.float32), self.y[idx]]
+            return [img, self.y[idx]]
 
 
 class NIHDataset2(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, transform=None, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
         self.s_attr = "Patient Gender"
         self.name = "nih-chest"
+        self.transform = transform
 
         if X is None:
             if df is not None:
@@ -400,10 +410,9 @@ class NIHDataset2(Dataset):
                 df = df.loc[:, df.columns.isin(columns)]
             
             if not kaggle:
-                crop = 1000
+                crop = 500
 
-            if crop:
-                df = df[:crop]
+
 
             if subset:
                 df = df[df.index.isin(subset)]
@@ -412,13 +421,17 @@ class NIHDataset2(Dataset):
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
             if traces:
                 if kaggle:
-                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100%_256_h5.hdf5"
+                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_rgb_xx3_int_h5.hdf5"
                 else:
-                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_100%_256_h5.hdf5"
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_1%_256_rgb_xx3_float_h5.hdf5"
                 f = h5py.File(self.path_to_traces, 'r')
-                self.X = np.array(f["images"][:]).astype(np.float32)[:1000] 
+                self.X = np.array(f["images"][:]).astype(np.float32) #[:1000] 
             else:
                 self.path_to_traces = None
+            
+            if crop:
+                df = df[:crop]
+                self.X = self.X[:crop]
             
             # self.X = df["Image Index"].to_numpy()
             self.y = df[self.target].to_numpy().astype(np.float32)
@@ -451,7 +464,7 @@ class NIHDataset2(Dataset):
  
         
         # folder_name = self.folder_name[idx]
-        # img_name = self.X[idx]
+        img = self.X[idx]/255
         # img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
         # img_path = self.path_to_traces + "/" +  img_name
         
@@ -460,10 +473,16 @@ class NIHDataset2(Dataset):
         # img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
 
+        # print(img)
+
+        if self.transform:
+            img = self.transform(img)
+            # print(img)
+
         if s_att:
-            return [self.X[idx], self.y[idx], self.a[idx]]
+            return [img, self.y[idx], self.a[idx]]
         else:
-            return [self.X[idx], self.y[idx]]
+            return [img, self.y[idx]]
 
 
 
@@ -564,7 +583,25 @@ def get_dataset(args):
         #     data_path = "/Users/zhouyi/Desktop/Msc Project"
         csv_file_train = data_path+'/nih-chest/nih_chest_all_clean.csv'
 
-        train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle)
+        nih_mean = [0.485, 0.456, 0.406] 
+        nih_std = [0.229, 0.224, 0.225]
+        pretrained_size = 256
+       
+
+
+        # nih_transform = transforms.Compose([transforms.ToTensor(),
+        #                                     transforms.Normalize(mean=nih_mean, std=nih_std)
+        #                                    ])
+        nih_transform = transforms.Compose([transforms.ToTensor(),
+                                            # transforms.Resize(pretrained_size),
+                                            transforms.Normalize(mean=[nih_mean[0], nih_mean[1], nih_mean[2]],
+                                                                  std=[nih_std[0], nih_std[1], nih_std[2]])
+                                           ])
+
+        if args.crop != 0:
+            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, transform=nih_transform, crop=args.crop)
+        else:
+            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
@@ -575,7 +612,22 @@ def get_dataset(args):
             data_path = "/Users/zhouyi/Desktop/Msc Project"
         csv_file_train = data_path+'/nih-chest/nih_chest_all_clean.csv'
 
-        train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle)
+        nih_mean = [0.485, 0.456, 0.406] 
+        nih_std = [0.229, 0.224, 0.225]
+        pretrained_size = 256
+
+        nih_transform = transforms.Compose([transforms.ToTensor(),
+                                        transforms.Resize(pretrained_size, antialias=True),
+                                        # transforms.Normalize(mean=[0,0,0],
+                                        #                         std=[255, 255, 255]),
+                                        transforms.Normalize(mean=[nih_mean[0], nih_mean[1], nih_mean[2]],
+                                                                std=[nih_std[0], nih_std[1], nih_std[2]])
+                                        ])
+
+        if args.crop != 0:
+            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, transform=nih_transform, crop=args.crop)
+        else:
+            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()

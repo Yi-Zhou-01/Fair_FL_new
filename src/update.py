@@ -39,7 +39,7 @@ class DatasetSplit(Dataset):
         # label = self.dataset.df[self.dataset.target][self.idxs[item]]
         # s_attr = self.dataset[self.dataset.s_attr][self.idxs[item]]
         image, label, s_attr = self.dataset[self.idxs[item]]
-        return torch.tensor(image), torch.tensor(label), torch.tensor(s_attr)
+        return torch.as_tensor(image), torch.as_tensor(label), torch.as_tensor(s_attr)
 
 
 # class AdultDatasetWrapDf(Dataset):

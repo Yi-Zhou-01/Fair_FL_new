@@ -353,7 +353,7 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
     
     fig, axs = plt.subplots(2, 2,figsize=(8, 6))
     if fairfed:
-        y_lim = [min(epoch_loss[0])-0.1, max(epoch_loss[0])+0.1]
+        y_lim = [min(epoch_loss[0])-0.05, max(epoch_loss[0])+0.05]
     # y_lim for final_layer fine-tuning
     else:
         y_lim = [min(epoch_loss[0])-0.5, max(epoch_loss[0])+0.5]
@@ -370,7 +370,10 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
         step = 1
 
     for i, ax in enumerate(axs.ravel()):
-        ax.plot(x1, epoch_loss[i], marker='o',  label= ('random client '+str(i+1)))
+        try:
+            ax.plot(x1, epoch_loss[i], marker='o',  label= ('random client '+str(i+1)))
+        except:
+            print(i, ax, len(epoch_loss))
     
         ax.legend(loc="upper right")
         ax.set_xticks(np.arange(min(x1), max(x1)+1, step))
