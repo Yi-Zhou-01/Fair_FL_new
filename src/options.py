@@ -93,6 +93,8 @@ def args_parser():
     
     parser.add_argument('--kaggle', type=bool, default=False, help='if runs on kaggle')
 
+    parser.add_argument('--colab', type=bool, default=False, help='if runs on colab')
+
     parser.add_argument('--rep', type=int, default=0, help='run exp with the same setting with # of rep')
 
     parser.add_argument('--crop', type=int, default=0, help='run exp with the same setting with # of rep')

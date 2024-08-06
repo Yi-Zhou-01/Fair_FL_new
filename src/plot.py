@@ -353,10 +353,10 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
     
     fig, axs = plt.subplots(2, 2,figsize=(8, 6))
     if fairfed:
-        y_lim = [min(epoch_loss[0])-0.05, max(epoch_loss[0])+0.05]
+        y_lim = [min(np.array(epoch_loss).flatten())-0.05, max(np.array(epoch_loss).flatten())+0.05]
     # y_lim for final_layer fine-tuning
     else:
-        y_lim = [min(epoch_loss[0])-0.5, max(epoch_loss[0])+0.5]
+        y_lim = [min(np.array(epoch_loss).flatten())-0.2, max(np.array(epoch_loss).flatten())+0.2]
 
     if title:
         fig.suptitle(title, fontsize=8)
@@ -378,6 +378,7 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
         ax.legend(loc="upper right")
         ax.set_xticks(np.arange(min(x1), max(x1)+1, step))
         ax.set_ylim(y_lim)
+        ax.grid(axis = 'y')
 
     print("Plot finish")
 

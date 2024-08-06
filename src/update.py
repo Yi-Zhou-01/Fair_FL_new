@@ -10,6 +10,7 @@ import pandas as pd
 import torch.nn.functional as F
 import utils
 import sys
+import time
 
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
@@ -107,7 +108,7 @@ class BatchDataloader:
 class LocalDataset(object):
     def __init__(self, global_dataset, local_idxs, test_ratio=0.2):
         
-        self.local_idxs = local_idxs
+        self.local_idxs = np.asarray(list(local_idxs))
         self.test_ratio = test_ratio
         # all_X = global_dataset.X
         # all_y = global_dataset.y
@@ -122,8 +123,12 @@ class LocalDataset(object):
 
         # self.local_train_set, self.local_test_set, self.local_val_set, \
         #      self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
-        self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  self.train_test_split(global_dataset.name, global_dataset.X, global_dataset.y, global_dataset.a)
-
+        
+        # print("Check local type: ")
+        # print(((self.local_idxs)))
+        self.train_set_idxs, self.test_set_idxs, self.val_set_idxs  =  \
+            self.train_test_split(global_dataset.name, global_dataset.X[(self.local_idxs)], \
+                                  global_dataset.y[(self.local_idxs)], global_dataset.a[(self.local_idxs)])
 
 
         # self.train_set_X, self.train_set_Y, self.train_set_a, \
@@ -146,6 +151,9 @@ class LocalDataset(object):
         # X = self.local_dataset.drop(self.target_label, axis=1)
         # y = self.local_dataset[self.target_label]
         # a = self.local_dataset[self.s_attr]
+
+        # local_X = X[self.local_idxs]
+        # local_y = y[self.]
 
         if name == "ptb-xl" or "nih-chest":
             dummy_X = np.array(range(len(X)))
@@ -199,7 +207,9 @@ class LocalDataset(object):
 
 
         # return local_train_set, local_test_set, local_val_set, train_set_idxs, test_set_idxs, val_set_idxs
-        return train_set_idxs, test_set_idxs, val_set_idxs
+        # print("train_set_idxs: ", train_set_idxs)
+        # print("test_set_idxs: ", test_set_idxs)
+        return self.local_idxs[train_set_idxs], self.local_idxs[test_set_idxs], self.local_idxs[val_set_idxs]
     # X_train.values, y_train.values, a_train.values, X_test.values, y_test.values, a_test.values, X_val.values, y_val.values, a_val.values, \
             # list(X_train.index), list(X_test.index), list(X_val.index)
 
@@ -252,7 +262,7 @@ class LocalUpdate(object):
         return trainloader, validloader, testloader
     
 
-    def update_final_layer(self, model,global_round):
+    def update_final_layer(self, model,global_round, client_idx=-1):
         model.train()
         model.set_grad(False)
         epoch_loss = []
@@ -333,16 +343,17 @@ class LocalUpdate(object):
                 batch_loss.append(loss.item())
                 batch_loss_1.append(loss_1.item())
 
-            print('| Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
-                    global_round, iter, sum(batch_loss), sum(batch_loss_1), sum(batch_loss_fairness)))
+            print('{} | # {} | Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
+                   int(time.time()), client_idx, global_round, iter, sum(batch_loss), sum(batch_loss_1), sum(batch_loss_fairness)))
     
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
 
         return model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
 
 
-    def update_weights(self, model, global_round):
+    def update_weights(self, model, global_round, client_idx=-1):
         # Set mode to train model
+        start_time = time.time()
         model.train()
         epoch_loss = []
 
@@ -375,10 +386,11 @@ class LocalUpdate(object):
                 optimizer.step()
 
                 if self.args.verbose and (batch_idx % 10 == 0):
-                    if batch_idx % 50 == 0 and (iter<10 or iter%10 ==0):
+                    if batch_idx % 100 == 0 and (iter<10 or iter%10 ==0):
                     # if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
-                        print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]  \tLoss: {:.6f}'.format(
-                            global_round, iter, batch_idx * len(images),
+                        # print("time: ", int(time.time() - start_time), int(time.time()))
+                        print('{} | # {} | Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]  \tLoss: {:.6f}'.format(
+                            int(time.time()), client_idx, global_round, iter, batch_idx * len(images),
                             len(self.trainloader.dataset),
                             100. * batch_idx / len(self.trainloader), loss.item()))
                 self.logger.add_scalar('loss', loss.item())
@@ -429,7 +441,7 @@ class LocalUpdate(object):
         return accuracy, loss
     
     # @profile
-    def inference_w_fairness(self, model, set="test", fairness_metric=["eod"]):
+    def inference_w_fairness(self, model, set="test", fairness_metric=["eod"], client_idx=-1):
         """ Returns the inference accuracy and loss of local test data (?). 
         """
 
@@ -466,6 +478,20 @@ class LocalUpdate(object):
             all_y = np.append(all_y, labels.detach().cpu().numpy())
             all_a = np.append(all_a, a.detach().cpu().numpy())
             all_pred = np.append(all_pred, pred_labels.detach().cpu().numpy())
+            # all_y = np.append(all_y, labels.item())
+            # all_a = np.append(all_a, a.item())
+            # all_pred = np.append(all_pred, pred_labels.item())
+            # print("all_y", type(all_y[0]))
+
+
+            if self.args.verbose and (batch_idx % 10 == 0):
+                    if batch_idx % 100 == 0:
+                    # if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
+                        # print("time: ", int(time.time() - start_time), int(time.time()))
+                        print('{} | # {} | Global Round : .. | Local Epoch : .. | [{}/{} ({:.0f}%)]  \tLoss: {:.6f}'.format(
+                            int(time.time()), client_idx, batch_idx * len(images),
+                            len(loader.dataset),
+                            100. * batch_idx / len(self.trainloader), batch_loss.item()))
         
 
         train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(all_a, all_pred)
@@ -749,10 +775,15 @@ def get_global_fairness(local_dataset_ls, prediction_ls, metric="eod", set="trai
 
 def get_global_fairness_new(local_a_ls, local_y_ls, prediction_ls, metric="eod", set="train"):
 
-    all_a = np.asarray(local_a_ls).flatten()
-    all_y = np.asarray(local_y_ls).flatten()
-    all_prediction =np.asarray(prediction_ls).flatten()
+    # all_a = np.asarray(local_a_ls).flatten()
+    # all_y = np.asarray(local_y_ls).flatten()
+    # all_prediction =np.asarray(prediction_ls).flatten()
 
+    all_a = np.concatenate(local_a_ls).ravel()
+    all_y =  np.concatenate(local_y_ls).ravel()
+    all_prediction = np.concatenate(prediction_ls).ravel()
+
+    
     original_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_y)
     prediction_bld_dataset = dataset.get_bld_dataset_w_pred(all_a, all_prediction)
 

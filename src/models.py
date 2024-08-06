@@ -338,10 +338,11 @@ class VGG(nn.Module):
 
 
 class MobileNet(nn.Module):
-    def __init__(self, dim_in):
+    def __init__(self, dim_in, kernel_size):
         super(MobileNet, self).__init__()
 
         self.input_size = dim_in
+        self.kernel_size = kernel_size
        
         # vgg_model = models.vgg19(weights='IMAGENET1K_V1')
         vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
@@ -355,18 +356,19 @@ class MobileNet(nn.Module):
         IN_FEATURES = 1280
 
         vgg_model.classifier = nn.Sequential(
-      
+        # nn.AvgPool2d(kernel_size=3),
+        # nn.Dropout(p=0.6), 
         nn.Linear(in_features=IN_FEATURES, out_features=512) ,
         nn.ReLU(),
         nn.Dropout(p=0.6), 
-        nn.Linear(in_features=512, out_features=256) ,
-        nn.ReLU(),
-        nn.Dropout(p=0.6), 
+        # nn.Linear(in_features=512, out_features=256) ,
+        # nn.ReLU(),
+        # nn.Dropout(p=0.6), 
         )
 
         self.features = vgg_model
 
-        self.final_layer = nn.Linear(in_features=256 , out_features=1)
+        self.final_layer = nn.Linear(in_features=512 , out_features=1)
 
     def forward(self, x):
         x = self.features(x)

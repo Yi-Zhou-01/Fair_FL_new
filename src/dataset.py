@@ -17,6 +17,7 @@ import h5py
 import cv2
 from torchvision import transforms
 from PIL import Image
+import sys
 
 class AdultDataset(Dataset):
     """Students Performance dataset."""
@@ -293,7 +294,7 @@ class PTBDataset(Dataset):
 class NIHDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, transform=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, colab=False, df=None, transform=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
@@ -307,11 +308,11 @@ class NIHDataset(Dataset):
             else:
                 df = pd.read_csv(csv_file, index_col=False)#[:1000] #.drop("Unnamed: 0", axis=1)
                 # print("self.df: ", self.df[:5])
-                columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name"]
+                columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name", "kaggle_path"]
                 df = df.loc[:, df.columns.isin(columns)]
             
-            if not kaggle:
-                crop = 1000
+            # if (not kaggle) and (not colab):
+            #     crop = 1000
 
             if crop:
                 df = df[:crop]
@@ -338,7 +339,7 @@ class NIHDataset(Dataset):
             self.X = df["Image Index"].to_numpy()
             self.y = df[self.target].to_numpy().astype(np.float32)
             self.a = df[self.s_attr].to_numpy().astype(np.float32)
-            self.folder_name = df["folder_name"].to_numpy()
+            self.kaggle_path = df["kaggle_path"].to_numpy()
 
             # self.X = self.standardlize_X(self.X)
             
@@ -366,15 +367,17 @@ class NIHDataset(Dataset):
             idx = idx.tolist()
             print("list index ")
         # return [self.X.iloc[idx].values, self.y[idx]]
+
         
-        folder_name = self.folder_name[idx]
-        img_name = self.X[idx]
-        img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
+        # folder_name = self.folder_name[idx]
+        # img_name = self.X[idx]
+        # img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
+
         # img_path = self.path_to_traces + "/" +  img_name
         
         # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         # img = cv2.imread(img_path).astype(np.float32)
-        img = Image.open(img_path).convert('RGB')
+        img = Image.open(self.kaggle_path[idx]).convert('RGB')
 
         # img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
@@ -392,7 +395,7 @@ class NIHDataset(Dataset):
 class NIHDataset2(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, transform=None, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, colab=False, transform=None, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
@@ -409,7 +412,7 @@ class NIHDataset2(Dataset):
                 columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name"]
                 df = df.loc[:, df.columns.isin(columns)]
             
-            if not kaggle:
+            if not kaggle and (not colab):
                 crop = 500
 
 
@@ -421,11 +424,34 @@ class NIHDataset2(Dataset):
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
             if traces:
                 if kaggle:
-                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_rgb_xx3_int_h5.hdf5"
+                    # self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_rgb_xx3_int_h5.hdf5"
+                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_gray_xx3_int_h5.hdf5"
+                elif colab:
+                    self.path_to_traces = "/content/drive/MyDrive/Fair_FL_new/data/nih-chest/nih_chest_100%_256_gray_xx3_int_h5.hdf5"
                 else:
-                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_1%_256_rgb_xx3_float_h5.hdf5"
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_10%_256_gray_xx3_int_h5.hdf5"
+                
+                print("getting f...")
                 f = h5py.File(self.path_to_traces, 'r')
-                self.X = np.array(f["images"][:]).astype(np.float32) #[:1000] 
+                self.X = np.array(f["images"][:]) #.astype(np.float32) #[:1000] 
+                print("shape self.X: ", self.X.shape)
+                print("sys.getsizeof: ", sys.getsizeof(self.X))
+                # print("path: ", self.path_to_traces)
+                # print("getting f1...")
+                # f1 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # print("getting f2...")
+                # f2 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # print("getting f3...")
+                # f3 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # print("getting f4...")
+                # f4 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # print("getting f5...")
+                # f5 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # print("getting f6...")
+                # f6 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
+                # self.X = np.concatenate((f1,f2,f3,f4,f5,f6))
+                # print("f1.shape: ", f1.shape)
+                # print("self.X.shape: ", self.X.shape)
             else:
                 self.path_to_traces = None
             
@@ -464,7 +490,9 @@ class NIHDataset2(Dataset):
  
         
         # folder_name = self.folder_name[idx]
-        img = self.X[idx]/255
+        img = self.X[idx].astype(np.float32)/255
+        # print(img.shape)
+        img = np.repeat(img, 3, axis=-1)
         # img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
         # img_path = self.path_to_traces + "/" +  img_name
         
@@ -498,20 +526,33 @@ def get_bld_dataset_w_pred(a, pred_labels):
     # new_df = test_dataset.df.copy(deep=True)
     # new_df[test_dataset.target] = prediction_test
     # print("Check sum prediction equal: ", sum(prediction_test), sum(new_df[test_dataset.target]))
-    return BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
+
+    bld_set = BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
+
+    # try:
+    #     bld_set = BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
+    # except:
+    #     print(new_df["y"])
+    #     print(new_df["a"])
+    #     print(pred_labels)
+    #     print(a)
+    #     print("---")
+    return bld_set
 
 
 # def df_to_dataset(df, dataset_name="adult"):
 #         csv_file_val =  os.getcwd()+'/data/adult/adult_dummy.csv'
 #         train_dataset = AdultDataset(csv_file_train)
 
-def get_partition(kaggle, p_idx, dataset="adult"):
+def get_partition(kaggle, colab, p_idx, dataset="adult"):
 
     if dataset == "nih-chest-h5":
         dataset = "nih-chest"
 
     if kaggle:
         path_root = "/kaggle/input/" + dataset + '/partition/' + str(p_idx)
+    elif colab:
+        path_root = "/content/drive/MyDrive/Fair_FL_new/data/" + dataset + '/partition/' + str(p_idx)
     else:
         path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
     file_ls = os.listdir(path_root)
@@ -529,6 +570,8 @@ def get_dataset(args):
 
     if args.kaggle:
         data_path = "/kaggle/input"
+    elif args.colab:
+        data_path = "/content/drive/MyDrive/Fair_FL_new/data"
     else:
         data_path = os.getcwd()+"/data"
 
@@ -547,7 +590,7 @@ def get_dataset(args):
 
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.colab, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'compas':
@@ -556,7 +599,7 @@ def get_dataset(args):
 
         train_dataset = CompasDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
     elif args.dataset == 'wcld':
@@ -565,7 +608,7 @@ def get_dataset(args):
 
         train_dataset = WCLDDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'ptb-xl':
@@ -574,7 +617,7 @@ def get_dataset(args):
 
         train_dataset = PTBDataset(csv_file_train, kaggle=args.kaggle)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     
@@ -599,11 +642,11 @@ def get_dataset(args):
                                            ])
 
         if args.crop != 0:
-            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, transform=nih_transform, crop=args.crop)
+            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform, crop=args.crop)
         else:
-            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, transform=nih_transform)
+            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle,colab=args.colab, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.colab, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
 
@@ -625,11 +668,11 @@ def get_dataset(args):
                                         ])
 
         if args.crop != 0:
-            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, transform=nih_transform, crop=args.crop)
+            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform, crop=args.crop)
         else:
-            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, transform=nih_transform)
+            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.kaggle, args.colab,  args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     # elif args.dataset == 'cifar':
     #     data_dir = '../data/cifar/'

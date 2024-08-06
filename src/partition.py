@@ -127,6 +127,8 @@ if __name__ == '__main__':
     classes = list(set(labels))
     n_classes = len(classes)
 
+    print("Dataset size: ", len(labels))
+
     if args.partition == "diri":
         client_idcs = dirichlet_sampling(dataset=train_data, num_clients=args.n_clients, attr=target_attr, alpha=args.alpha, ratio=None)
     elif args.partition == "iid":
@@ -134,6 +136,9 @@ if __name__ == '__main__':
 
 
     print("client_idcs type: ", type(client_idcs))
+
+    for i in range(len(client_idcs)):
+        print("Client {}:  {}  ({}%) samples".format(i, len(client_idcs[i]), int(100*len(client_idcs[i])/len(labels))))
 
     data_name = csv_file_train.split("/")[-1].split('.')[0]
     file_name = "user_groups_%dclients_%.1falpha_%s_%s_%s.npy" %(args.n_clients, args.alpha, args.partition, args.target_attr, data_name)
