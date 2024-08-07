@@ -395,7 +395,7 @@ class NIHDataset(Dataset):
 class NIHDataset2(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, colab=False, transform=None, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, platform="", transform=None, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
@@ -412,7 +412,7 @@ class NIHDataset2(Dataset):
                 columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name"]
                 df = df.loc[:, df.columns.isin(columns)]
             
-            if not kaggle and (not colab):
+            if platform == "":
                 crop = 500
 
 
@@ -423,11 +423,13 @@ class NIHDataset2(Dataset):
             # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
             if traces:
-                if kaggle:
+                if platform=="kaggle":
                     # self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_rgb_xx3_int_h5.hdf5"
                     self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_gray_xx3_int_h5.hdf5"
-                elif colab:
+                elif platform=="colab":
                     self.path_to_traces = "/content/drive/MyDrive/Fair_FL_new/data/nih-chest/nih_chest_100%_256_gray_xx3_int_h5.hdf5"
+                elif platform=="azure":
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_100%_256_gray_xx3_int_h5.hdf5"
                 else:
                     self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_10%_256_gray_xx3_int_h5.hdf5"
                 
@@ -544,15 +546,17 @@ def get_bld_dataset_w_pred(a, pred_labels):
 #         csv_file_val =  os.getcwd()+'/data/adult/adult_dummy.csv'
 #         train_dataset = AdultDataset(csv_file_train)
 
-def get_partition(kaggle, colab, p_idx, dataset="adult"):
+def get_partition(platform, p_idx, dataset="adult"):
 
     if dataset == "nih-chest-h5":
         dataset = "nih-chest"
 
-    if kaggle:
+    if get_partition=="kaggle":
         path_root = "/kaggle/input/" + dataset + '/partition/' + str(p_idx)
-    elif colab:
+    elif get_partition=="colab":
         path_root = "/content/drive/MyDrive/Fair_FL_new/data/" + dataset + '/partition/' + str(p_idx)
+    elif get_partition=="azure":
+        path_root = 'data/' + dataset + '/partition/' + str(p_idx)
     else:
         path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
     file_ls = os.listdir(path_root)
@@ -568,12 +572,24 @@ def get_dataset(args):
     each of those users.
     """
 
-    if args.kaggle:
+    if args.platform=="kaggle":
         data_path = "/kaggle/input"
-    elif args.colab:
+    elif args.platform=="colab":
         data_path = "/content/drive/MyDrive/Fair_FL_new/data"
+    elif args.platform=="azure":
+        data_path = os.getcwd()+"/data"
     else:
         data_path = os.getcwd()+"/data"
+
+
+
+
+    # if args.kaggle:
+    #     data_path = "/kaggle/input"
+    # elif args.colab:
+    #     data_path = "/content/drive/MyDrive/Fair_FL_new/data"
+    # else:
+    #     data_path = os.getcwd()+"/data"
 
     if  args.dataset == 'adult':
 
@@ -590,7 +606,7 @@ def get_dataset(args):
 
         train_dataset = AdultDataset(csv_file_train)
         test_dataset = AdultDataset(csv_file_test)
-        partition_file = get_partition(args.kaggle, args.colab, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'compas':
@@ -599,7 +615,7 @@ def get_dataset(args):
 
         train_dataset = CompasDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
     elif args.dataset == 'wcld':
@@ -608,7 +624,7 @@ def get_dataset(args):
 
         train_dataset = WCLDDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     elif args.dataset == 'ptb-xl':
@@ -617,7 +633,7 @@ def get_dataset(args):
 
         train_dataset = PTBDataset(csv_file_train, kaggle=args.kaggle)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle,args.colab, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
     
@@ -642,11 +658,11 @@ def get_dataset(args):
                                            ])
 
         if args.crop != 0:
-            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform, crop=args.crop)
+            train_dataset = NIHDataset2(csv_file_train, platform=args.platform, transform=nih_transform, crop=args.crop)
         else:
-            train_dataset = NIHDataset2(csv_file_train, kaggle=args.kaggle,colab=args.colab, transform=nih_transform)
+            train_dataset = NIHDataset2(csv_file_train, platform=args.platform, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.colab, args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition( platform=args.platform, p_idx=args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
 
 

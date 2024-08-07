@@ -48,8 +48,10 @@ def args_parser():
                         of dataset")
     parser.add_argument('--num_classes', type=int, default=10, help="number \
                         of classes")
-    parser.add_argument('--gpu', default=None, help="To use cuda, set \
-                        to a specific GPU ID. Default set to use CPU.")
+    
+    # parser.add_argument('--gpu', type=bool, default=True, help="To use cuda, set \
+    #                     to a specific GPU ID. Default set to use CPU.")
+    
     parser.add_argument('--optimizer', type=str, default='sgd', help="type \
                         of optimizer")
     parser.add_argument('--iid', type=int, default=1,
@@ -81,6 +83,8 @@ def args_parser():
 
     parser.add_argument('--plot_tpfp', type=bool, default=False, help='Local test set ratio')
 
+    parser.add_argument('--gpu', default=None, help='Default no gpu, if gpu: pass True')
+
     parser.add_argument('--fairfed_ep', type=int, default=20, help='Global training round for FairFed')
     
     parser.add_argument('--debias', type=str, default="pp", help='Local debias approaches for new fl_new: "pp" for post-processing and "ft" for final layer fine-tuning')
@@ -91,9 +95,11 @@ def args_parser():
     
     parser.add_argument('--local_split', type=str, default="", help='File path if use saved local client train/test split; Empty if want a newly generated one.')
     
-    parser.add_argument('--kaggle', type=bool, default=False, help='if runs on kaggle')
+    # parser.add_argument('--kaggle', type=bool, default=False, help='if runs on kaggle')
 
-    parser.add_argument('--colab', type=bool, default=False, help='if runs on colab')
+    # parser.add_argument('--colab', type=bool, default=False, help='if runs on colab')
+
+    parser.add_argument('--platform', type=str, default="", help='The platform that the code will run on: "": Local; 1: kaggle; 2: colab; 3: azure')
 
     parser.add_argument('--rep', type=int, default=0, help='run exp with the same setting with # of rep')
 

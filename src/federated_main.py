@@ -58,13 +58,21 @@ def main():
     # if args.gpu:
     #     torch.cuda.set_device(args.gpu)
     device = 'cuda' if args.gpu else 'cpu'
+    print("Using devide: ", device)
+    # print("Check device; ", device)
+    # print("args.gpu: ", args.gpu)
+    # # print("args.plot_tpfp: ", args.plot_tpfp)
+    # if args.gpu == False:
+    #     print("**&&")
 
 
     # Create folder to save training info
-    if args.kaggle:
+    if args.platform=="kaggle":
         save_to_root = "/kaggle/working"
-    elif args.colab:
+    elif args.platform=="colab":
         save_to_root = "/content/drive/MyDrive/Fair_FL_new/save"
+    elif args.platform=="azure":
+        save_to_root = os.getcwd() + '/save'
     else:
         save_to_root =  os.getcwd() + '/save'
 
