@@ -105,7 +105,8 @@ def args_parser():
 
     parser.add_argument('--crop', type=int, default=0, help='run exp with the same setting with # of rep')
     
-
+    parser.add_argument('--example_folder', default=None, help='Example folder for collecting results')
+    
     args = parser.parse_args()
     return args
 
