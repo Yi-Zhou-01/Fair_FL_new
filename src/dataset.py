@@ -40,7 +40,8 @@ class AdultDataset(Dataset):
             if subset:
                 df = df[df.index.isin(subset)]
 
-            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            # self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
             self.X = self.standardlize_X(self.X)
             self.y = df[self.target].to_numpy().astype(np.float32)
             self.a = df[self.s_attr].to_numpy().astype(np.float32)

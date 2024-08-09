@@ -177,6 +177,10 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     ax1.set_xticks(np.arange(min(X), max(X)+1, 1.0))
     ax2.set_xticks(np.arange(min(X), max(X)+1, 1.0))
 
+    ax2.axhline(0.8, color='lightsteelblue', alpha=0.6)
+    ax1.axhline(0.1, color='orange', alpha=0.4)
+    ax1.axhline(0.0, color='black', alpha=0.6)
+
     
     if save_img:
         save_to = data_path.split("stats_multi_exp")[0] + "all_exp_stats_plot.png"
