@@ -270,15 +270,16 @@ class LocalUpdate(object):
         # optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=1e-2,
                                         # momentum=0.9, weight_decay=5e-4)
 
-        optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=5e-3,
+        optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.ft_lr,
                                         momentum=0.9, weight_decay=5e-4)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5, last_epoch=-1)
         # if self.args.optimizer == 'sgd':
         #     optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.lr,
         #                                 momentum=0.5, weight_decay=1e-4)
             
         # elif self.args.optimizer == 'adam':
         #     optimizer = torch.optim.Adam(model.final_layer.parameters(), lr=self.args.lr,
-        #                                 weight_decay=1e-4)
+        #                                 weight_decay=1evscode-webview://1hs7hefg7d9igdkj7jjs2g8ig9einv4iiof1dn2o9nvsvcaqja52/index.html?id=cfc1b4fd-dd94-41f2-b483-be71d2d91a99&origin=148850e9-0f3e-4859-a5fc-0508f77f5be3&swVersion=4&extensionId=vscode.media-preview&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app#-4)
         
         for iter in range(self.args.ft_ep):
             batch_loss = []
@@ -286,14 +287,7 @@ class LocalUpdate(object):
             batch_loss_1 = []
             for batch_idx, (images, labels, a) in enumerate(self.trainloader):
                 images, labels, a = images.to(self.device), labels.to(self.device), a.to(self.device)
-                # model.zero_grad()
                 optimizer.zero_grad()  
-
-                # outputs = model.final_layer(model.get_features(images)) #.squeeze()
-                # log_softmax, softmax = F.log_softmax(outputs, dim=1), F.softmax(outputs, dim=1)
-                # loss = nn.NLLLoss()
-                # loss(log_softmax, labels.long())
-                # eod_loss = utils.equalized_odds_diff(softmax[:, -1], labels, a)
 
                 outputs = model.final_layer(model.get_features(images)).squeeze()
                 # pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs]).view(-1)
@@ -302,26 +296,8 @@ class LocalUpdate(object):
                 eod_loss = utils.equalized_odds_diff(pred_labels, labels, a)
                 # print("eod_loss: ", type(eod_loss))
                 loss_1 = self.criterion(outputs, labels)
-                # print("loss_1: ", type(loss_1))
-                
-                # print("outputs: ", outputs.shape, outputs)
-                
-                # print("softmax: ", softmax.shape, softmax)
-                # print("log_softmax: ", log_softmax.shape, log_softmax)
-                # print("labels: ", labels.shape, labels)
-                # print("pred_labels: ", pred_labels)
-                
-                            
-                # print("outputs: ", outputs)
-                # print("softmax: ", softmax)
-                # print("pred_labels: ", pred_labels)
 
-                
-                # loss = self.criterion(log_softmax, labels)
-                # loss_1 = nn.NLLLoss(weight=class_weights)(log_softmax, labels)
-                # loss = loss_1*0.005 + self.args.ft_alpha * eod_loss
-                # loss = loss_1 + self.args.ft_alpha * eod_loss
-                loss = loss_1*0 + self.args.ft_alpha * eod_loss
+                loss = loss_1*self.args.ft_alpha2 + self.args.ft_alpha * eod_loss
                 # print("loss: ", type(loss))
                 # loss = eod_loss
 
@@ -343,10 +319,15 @@ class LocalUpdate(object):
                 batch_loss.append(loss.item())
                 batch_loss_1.append(loss_1.item())
 
+                # if batch_idx % 50 == 0:
+                #     print('{} | # {} | Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
+                #         int(time.time()), client_idx, global_round, iter, loss.item(), loss_1.item(), eod_loss.item()))
+                
             print('{} | # {} | Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
-                   int(time.time()), client_idx, global_round, iter, sum(batch_loss), sum(batch_loss_1), sum(batch_loss_fairness)))
+                   int(time.time()), client_idx, global_round, iter, sum(batch_loss)/len(batch_loss), sum(batch_loss_1)/len(batch_loss_1), sum(batch_loss_fairness)/len(batch_loss_fairness)))
     
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
+            # scheduler.step()
 
         return model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
 

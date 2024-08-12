@@ -214,80 +214,6 @@ def main():
             train_loss.append(loss_avg)
             local_loss_all.append(local_losses)
 
-            # Actually it is local test accuracy
-            # Calculate avg training accuracy over all users at every epoch
-            # print("Start inference fairness: FedAvg train ...")
-            # list_acc, list_loss = [], []
-            # global_model.eval()
-            # all_local_train_y = []
-            # all_local_train_a = []
-            # all_local_train_pred = []
-            # all_local_train_eod = []
-            # pred_train_dic["pred_labels_fedavg"] = {}
-            # pred_train_dic["labels"] = {}
-            # pred_train_dic["s_attr"] = {}
-
-            # for c in range(args.num_users):
-            #     print("time: ", int(time.time() - start_time), int(time.time()))
-            #     local_dataset = local_set_ls[c]
-            #     split_idxs = (local_dataset.train_set_idxs,local_dataset.test_set_idxs,local_dataset.val_set_idxs)
-            #     local_model = LocalUpdate(args=args, split_idxs=split_idxs, dataset=train_dataset,
-            #                             idxs=user_groups[idx], logger=logger)
-
-            #     # local_model = LocalUpdate(args=args, local_dataset=local_dataset, dataset=train_dataset,
-            #     #                         idxs=user_groups[idx], logger=logger)
-                
-            #     # acc, loss = local_model.inference(model=global_model)
-            #     if args.plot_tpfp:
-            #         fairness_metrics = ["eod","tpr","fpr"]
-            #     else:
-            #         fairness_metrics = ["eod"]
-            #     acc, loss, all_y, all_a, all_pred, local_fairness = local_model.inference_w_fairness(model=global_model, set="train", fairness_metric=fairness_metrics, client_idx=c)
-
-            #     stat_dic["train_acc_fedavg"][c] = acc
-            #     stat_dic["train_eod_fedavg"][c] = local_fairness["eod"]
-            #     if args.plot_tpfp:
-            #         stat_dic["train_tpr_fedavg"][c] = local_fairness["tpr"]
-            #         stat_dic["train_fpr_fedavg"][c] = local_fairness["fpr"]
-                
-            #     all_local_train_y.append(all_y)
-            #     all_local_train_a.append(all_a)
-            #     all_local_train_pred.append(all_pred)
-
-            #     pred_train_dic["pred_labels_fedavg"][c] = np.array([])
-            #     pred_train_dic["labels"][c] = np.array([])
-            #     pred_train_dic["s_attr"][c] = np.array([])
-
-            #     pred_train_dic["pred_labels_fedavg"][c] = (np.asarray(all_y))
-            #     pred_train_dic["labels"][c] = (np.asarray(all_a))
-            #     pred_train_dic["s_attr"][c] =(np.asarray(all_pred))
-
-
-            #     all_local_train_eod.append( local_fairness["eod"])
-
-            #     list_acc.append(acc)
-            #     list_loss.append(loss)
-            # train_accuracy.append(sum(list_acc)/len(list_acc))
-
-            # all_local_train_pred = np.asarray(all_local_train_pred, dtype=np.float32)
-            # all_local_train_y = np.asarray(all_local_train_y, dtype=np.float32)
-            # all_local_train_a = np.asarray(all_local_train_a, dtype=np.float32)
-
-
-            # pred_train_dic["pred_labels_fedavg"] = []
-            # pred_train_dic["labels"] = []
-            # pred_train_dic["s_attr"] = []
-            # # print(all_local_train_pred)
-            # # print(np.asarray(all_local_train_pred).shape)
-            # # print(type(all_local_train_pred))
-            # pred_train_dic["pred_labels_fedavg"] = torch.from_numpy(np.asarray(all_local_train_pred))
-            # pred_train_dic["labels"] = torch.from_numpy(np.asarray(all_local_train_y))
-            # pred_train_dic["s_attr"] =torch.from_numpy(np.asarray(all_local_train_a))
-            # # pred_train_dic["pred_labels_fedavg"] = (np.asarray(all_local_train_pred))
-            # # pred_train_dic["labels"] = (np.asarray(all_local_train_y))
-            # # pred_train_dic["s_attr"] =(np.asarray(all_local_train_a))
-
-
 
             # print global training loss after every 'i' rounds
             print_every = 1
@@ -385,16 +311,6 @@ def main():
             all_local_test_a.append(all_a)
             all_local_test_pred.append(all_pred)
 
-            # pred_test_dic["pred_labels_fedavg"] = []
-            # pred_test_dic["labels"] = []
-            # pred_test_dic["s_attr"] = []
-            # pred_test_dic["pred_labels_fedavg"] = torch.from_numpy(np.asarray(all_local_test_pred))
-            # pred_test_dic["labels"] = torch.from_numpy(np.asarray(all_local_test_y))
-            # pred_test_dic["s_attr"] =  torch.from_numpy(np.asarray(all_local_test_a))
-            # pred_test_dic["pred_labels_fedavg"] = (np.asarray(all_local_test_pred))
-            # pred_test_dic["labels"] = (np.asarray(all_local_test_y))
-            # pred_test_dic["s_attr"] =  (np.asarray(all_local_test_a))
-
         print("---- stat_dic ----")
         print(stat_dic["test_acc_fedavg"])
 
@@ -409,101 +325,16 @@ def main():
         # Print weights of model
         weights_fedavg = global_model.state_dict()
 
-        print("weights_fedavg: ", weights_fedavg)
+        # print("weights_fedavg: ", weights_fedavg)
         with open(statistics_dir+"/weights.txt", "a") as w_file:
             w_file.write("FedAvg weights: \n")
             w_file.write("final_layer.weight: \n" + str(weights_fedavg["final_layer.weight"]) +"\n")
             w_file.write("final_layer.bias: \n"+str(weights_fedavg["final_layer.bias"]) +"\n")
         
-        # Measure local train/test acc & fairness before post-processing
-
-
-        
-        # print("Start calculating metrics...")
-        # if args.plot_tpfp:
-        #     acc_test, fairness_test, pred_labels_test, labels_test, s_attr_ls_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-        #                                                    args.gpu, set="test", fairness_metric=["eod","tpr","fpr"], return_label=True, kaggle=args.kaggle)
-        #     acc_train, fairness_train, pred_labels_train,labels_train, s_attr_ls_train = update.get_all_local_metrics(args.dataset,args.num_users, global_model, local_set_ls,
-        #                                                     args.gpu, set="train", fairness_metric=["eod","tpr","fpr"], return_label=True, kaggle=args.kaggle)
-        #     stat_dic["test_acc_fedavg"] = acc_test
-        #     stat_dic["train_acc_fedavg"] = acc_train
-        #     stat_dic["test_eod_fedavg"] = fairness_test["eod"]
-        #     stat_dic["train_eod_fedavg"] = fairness_train["eod"]
-        #     stat_dic["test_tpr_fedavg"] = fairness_test["tpr"]
-        #     stat_dic["train_tpr_fedavg"] = fairness_train["tpr"]
-        #     stat_dic["test_fpr_fedavg"] = fairness_test["fpr"]
-        #     stat_dic["train_fpr_fedavg"] = fairness_train["fpr"]
-        # else:
-        #     acc_test, fairness_test, pred_labels_test, labels_test, s_attr_ls_test = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-        #                                                    args.gpu, set="test", fairness_metric=["eod"], return_label=True, kaggle=args.kaggle)
-        #     acc_train, fairness_train, pred_labels_train,labels_train, s_attr_ls_train = update.get_all_local_metrics(args.dataset, args.num_users, global_model, local_set_ls,
-        #                                                     args.gpu, set="train", fairness_metric=["eod"], return_label=True, kaggle=args.kaggle)
-        #     stat_dic["test_acc_fedavg"] = acc_test
-        #     stat_dic["test_eod_fedavg"] = fairness_test["eod"]
-        #     stat_dic["train_acc_fedavg"] = acc_train
-        #     stat_dic["train_eod_fedavg"] = fairness_train["eod"]
-        # pred_train_dic["pred_labels_fedavg"] = []
-        # pred_test_dic["pred_labels_fedavg"] = []
-        # pred_train_dic["labels"] = []
-        # pred_test_dic["labels"] = []
-        # pred_train_dic["s_attr"] = []
-        # pred_test_dic["s_attr"] = []
-        # pred_train_dic["pred_labels_fedavg"] = pred_labels_train
-        # pred_test_dic["pred_labels_fedavg"] = pred_labels_test
-        # pred_train_dic["labels"] = labels_train
-        # pred_test_dic["labels"] = labels_test
-        # pred_train_dic["s_attr"] = (s_attr_ls_train)
-        # pred_test_dic["s_attr"] =  (s_attr_ls_test)
-
-
-        '''
-        # Measure local accuracy and fairness
-        for idx in range(args.num_users):
-            idxs = user_groups[idx]
-            
-            test_set_df = local_set_ls[idx].test_set
-            train_set_df = local_set_ls[idx].train_set
-
-            print(" ^^^^^^^^^^^^^^^^^^^ ")
-            print("Test Set Statistics: ", str(sum(test_set_df["income"])), " / ", str(len(test_set_df)))
-            print("Train Set Statistics: ", str(sum(train_set_df["income"])), " / ", str(len(train_set_df)))
-
-            # print("Test Set Statistics: ", str(sum(local_set_ls[idx].test_set["income"])), " / ", str(len(local_set_ls[idx].test_set)))
-            # print("Train Set Statistics: ", str(sum(local_set_ls[idx].train_set["income"])), " / ", str(len(local_set_ls[idx].train_set)))
-
-            local_test_dataset =  dataset.AdultDataset(csv_file="", df=test_set_df)
-            local_test_prediction, local_acc = update.get_prediction(args, global_model, local_test_dataset)
-            local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
-
-            privileged_groups = [{train_dataset.s_attr: 1}]
-            unprivileged_groups = [{train_dataset.s_attr: 0}]
-            
-            bm = BinaryLabelDatasetMetric(local_test_dataset.bld)
-
-            # print("P - N: ", bm.num_positives(), bm.num_negatives())
-
-            # Test set statistics BEFORE post-processing
-            cm_pred_test = ClassificationMetric(local_test_dataset.bld, local_test_bld_prediction_dataset,
-                            unprivileged_groups=unprivileged_groups,
-                            privileged_groups=privileged_groups)
-
-            stat_dic['test_acc_fedavg'].append(cm_pred_test.accuracy())
-            stat_dic['test_eod_fedavg'].append(cm_pred_test.equalized_odds_difference())
-            # stat_dic['test_eod_before'].append(cm_pred_test.average_abs_odds_difference())
-            
-            # stat_dic['test_fpr_fedavg'].append(abs(cm_pred_test.difference(cm_pred_test.false_positive_rate)))
-            # stat_dic['test_tpr_fedavg'].append(abs( cm_pred_test.difference(cm_pred_test.true_positive_rate)))
-
-        '''
 
         privileged_groups = [{"a": 1}]
         unprivileged_groups = [{"a": 0}]
 
-
-        # train_acc_new = []
-        # test_acc_new = []
-        # train_eod_new = []
-        # test_eod_new = []
         
         print("time: ", int(time.time() - start_time), int(time.time()))
         # Post-processing approach
@@ -515,20 +346,6 @@ def main():
             for idx in range(args.num_users):
                 idxs = user_groups[idx]
                 local_set = local_set_ls[idx]
-
-
-              
-                # local_train_prediction, local_train_acc = update.get_prediction(args, global_model, X=local_set.local_train_set.X, Y=local_set.local_train_set.y)
-                # # train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_train_dataset, local_train_prediction)
-
-                # train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a=local_set.local_train_set.a, pred_labels=local_train_prediction)
-                # train_bld_original = dataset.get_bld_dataset_w_pred(a=local_set.local_train_set.a, pred_labels=local_set.local_train_set.y)
-                
-                # local_test_prediction, local_acc = update.get_prediction(args, global_model, X=local_set.local_test_set.X, Y=local_set.local_test_set.y)
-                # # local_test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(local_test_dataset, local_test_prediction)
-                # test_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a=local_set.local_test_set.a, pred_labels=local_test_prediction)
-                # test_bld_original = dataset.get_bld_dataset_w_pred(a=local_set.local_test_set.a, pred_labels=local_set.local_test_set.y)
-
 
                 train_bld_prediction_dataset = dataset.get_bld_dataset_w_pred(a=all_local_train_a[idx], pred_labels=all_local_train_pred[idx])
                 train_bld_original = dataset.get_bld_dataset_w_pred(a=all_local_train_a[idx], pred_labels=all_local_train_y[idx])
@@ -624,6 +441,7 @@ def main():
                     model=local_train_model, global_round=epoch, client_idx=c)
                 
                 all_epoch_loss.append(epoch_loss)
+                # all_epoch_loss.append(loss)
                 # print("ep loss: ", epoch_loss)
                 
                 local_train_model.load_state_dict(weights)
@@ -666,30 +484,7 @@ def main():
 
             plot.plot_loss_ft((all_epoch_loss), title=fig_titl_loss_ft, save_to=plot_file_loss_ft)
                     
-                
 
-
-        # print("Test Acc ...")
-        # print(stat_dic['test_acc_fedavg'])
-        # print(stat_dic['test_acc_new'])
-        # print("Test EOD ...")
-        # print(stat_dic['test_eod_fedavg'])
-        # print(stat_dic['test_eod_new'])
-        # # print("Test FPR ...")
-        # # print(stat_dic['test_fpr_fedavg'])
-        # # print(stat_dic['test_fpr_after'])
-
-        # print("Train Acc ...")
-        # print(stat_dic['train_acc_fedavg'])
-        # print(stat_dic['train_acc_new'])
-        # print("Train EOD ...")
-        # print(stat_dic['train_eod_fedavg'])
-        # print(stat_dic['train_eod_new'])
-        # # print("Train FPR ...")
-        # # print(stat_dic['train_fpr_before'])
-        # # print(stat_dic['train_fpr_after'])
-        
-        
         # print("stats dic: ")
         # print(stat_dic)
     
@@ -868,7 +663,7 @@ def main():
         # Check FairFed weights
         weights_fedavg = global_model.state_dict()
 
-        print("weights_FairFed: ", weights_fedavg)
+        # print("weights_FairFed: ", weights_fedavg)
         with open(statistics_dir+"/weights.txt", "a") as w_file:
             w_file.write("FairFed weights: \n")
             w_file.write("final_layer.weight: \n" + str(weights_fedavg["final_layer.weight"]) +"\n")
@@ -1045,7 +840,7 @@ def main():
 
     print(file_name, " saved!")
 
-    print('\n Total Run Time: {0:0.4f}'.format(time.time()-start_time))
+    print('\n Total Run Time: {0:0.4f} s'.format(time.time()-start_time))
 
 
     # print("Check local set: ")

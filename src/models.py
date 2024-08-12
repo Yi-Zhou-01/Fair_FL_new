@@ -9,117 +9,6 @@ from torchvision import models
 
 
 
-def get_model(args, img_size):
-
-    if args.dataset == 'ptb-xl':
-        N_LEADS = 12  # the 12 leads
-        N_CLASSES = 1  # just the age
-        seq_length = 1000
-        # net_filter_size=[64, 128, 196, 256, 320]
-        # net_seq_lengh=[4096, 1024, 256, 64, 16]
-        net_filter_size=[32, 64, 128, 196, 256]
-        net_seq_lengh=[1000, 500, 250, 125, 25]
-        dropout_rate=0.8
-        kernel_size=17
-        global_model = models.ResNetPTB(input_dim=(N_LEADS, seq_length),
-                        blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
-                        n_classes=N_CLASSES,
-                        kernel_size=kernel_size,
-                        dropout_rate=dropout_rate)
-    
-    elif args.dataset == 'nih-chest' or args.dataset == 'nih-chest-h5':
-        N_CLASSES = 1  # just the age
-        seq_length = 256
-        # net_filter_size=[64, 128, 196, 256, 320]
-        # net_seq_lengh=[4096, 1024, 256, 64, 16]
-        # net_filter_size=[32, 64, 128, 196, 256]
-        # # net_seq_lengh=[1024, 512, 256, 64, 16]
-        # net_seq_lengh=[256, 128, 64, 32, 16]
-        # dropout_rate=0.8
-        kernel_size=17
-        if args.model == 'vgg':
-            global_model = models.VGG(dim_in=(seq_length, seq_length))
-        elif args.model == 'mobile':
-            global_model = models.MobileNet(dim_in=(seq_length, seq_length), kernel_size=kernel_size)
-        
-        # global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
-        #         blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
-        #         n_classes=N_CLASSES,
-        #         kernel_size=kernel_size,
-        #         dropout_rate=dropout_rate)
-
-        
-    elif args.model == 'cnn':
-        # Convolutional neural netork
-        if args.dataset == 'mnist':
-            global_model = CNNMnist(args=args)
-        elif args.dataset == 'fmnist':
-            global_model = CNNFashion_Mnist(args=args)
-        elif args.dataset == 'cifar':
-            global_model = CNNCifar(args=args)
-
-    elif args.model == 'mlp':
-        # Multi-layer preceptron
-        if args.dataset == 'adult':
-            # img_size = train_dataset[0][0].shape
-            # print("img size: ", img_size)
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
-                #                 dim_out=args.num_classes)
-                global_model = MLPAdult2(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
-        
-        elif args.dataset == 'compas':
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
-                #                 dim_out=args.num_classes)
-                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
-        elif args.dataset == 'wcld':
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
-        else:
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-                global_model = MLP(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
-    elif args.model == 'plain':
-        if args.dataset == 'adult':
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-            global_model = Plain_LR_Adult(dim_in=len_in)
-        elif args.dataset == 'compas':
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-            global_model = Plain_LR_Adult(dim_in=len_in)
-        elif args.dataset == 'wcld':
-            # img_size = train_dataset[0][0].shape
-            len_in = 1
-            for x in img_size:
-                len_in *= x
-            global_model = Plain_LR_Adult(dim_in=len_in)
-    else:
-        exit('Error: unrecognized model')
-
-    return global_model
-
-
-
 
 class MLP(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out):
@@ -648,3 +537,117 @@ class modelC(nn.Module):
         pool_out.squeeze_(-1)
         pool_out.squeeze_(-1)
         return pool_out
+
+
+
+
+
+def get_model(args, img_size):
+
+    if args.dataset == 'ptb-xl':
+        N_LEADS = 12  # the 12 leads
+        N_CLASSES = 1  # just the age
+        seq_length = 1000
+        # net_filter_size=[64, 128, 196, 256, 320]
+        # net_seq_lengh=[4096, 1024, 256, 64, 16]
+        net_filter_size=[32, 64, 128, 196, 256]
+        net_seq_lengh=[1000, 500, 250, 125, 25]
+        dropout_rate=0.8
+        kernel_size=17
+        global_model = ResNetPTB(input_dim=(N_LEADS, seq_length),
+                        blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+                        n_classes=N_CLASSES,
+                        kernel_size=kernel_size,
+                        dropout_rate=dropout_rate)
+    
+    elif args.dataset == 'nih-chest' or args.dataset == 'nih-chest-h5':
+        N_CLASSES = 1  # just the age
+        seq_length = 256
+        # net_filter_size=[64, 128, 196, 256, 320]
+        # net_seq_lengh=[4096, 1024, 256, 64, 16]
+        # net_filter_size=[32, 64, 128, 196, 256]
+        # # net_seq_lengh=[1024, 512, 256, 64, 16]
+        # net_seq_lengh=[256, 128, 64, 32, 16]
+        # dropout_rate=0.8
+        kernel_size=17
+        if args.model == 'vgg':
+            global_model = VGG(dim_in=(seq_length, seq_length))
+        elif args.model == 'mobile':
+            global_model = MobileNet(dim_in=(seq_length, seq_length), kernel_size=kernel_size)
+        
+        # global_model = models.ResNetPTB(input_dim=(seq_length, seq_length),
+        #         blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+        #         n_classes=N_CLASSES,
+        #         kernel_size=kernel_size,
+        #         dropout_rate=dropout_rate)
+
+        
+    elif args.model == 'cnn':
+        # Convolutional neural netork
+        if args.dataset == 'mnist':
+            global_model = CNNMnist(args=args)
+        elif args.dataset == 'fmnist':
+            global_model = CNNFashion_Mnist(args=args)
+        elif args.dataset == 'cifar':
+            global_model = CNNCifar(args=args)
+
+    elif args.model == 'mlp':
+        # Multi-layer preceptron
+        if args.dataset == 'adult':
+            # img_size = train_dataset[0][0].shape
+            # print("img size: ", img_size)
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
+                #                 dim_out=args.num_classes)
+                global_model = MLPAdult2(dim_in=len_in, dim_hidden=64,
+                                dim_out=args.num_classes)
+        
+        elif args.dataset == 'compas':
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
+                #                 dim_out=args.num_classes)
+                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
+                                dim_out=args.num_classes)
+        elif args.dataset == 'wcld':
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
+                                dim_out=args.num_classes)
+        else:
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+                global_model = MLP(dim_in=len_in, dim_hidden=64,
+                                dim_out=args.num_classes)
+    elif args.model == 'plain':
+        if args.dataset == 'adult':
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+            global_model = Plain_LR_Adult(dim_in=len_in)
+        elif args.dataset == 'compas':
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+            global_model = Plain_LR_Adult(dim_in=len_in)
+        elif args.dataset == 'wcld':
+            # img_size = train_dataset[0][0].shape
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+            global_model = Plain_LR_Adult(dim_in=len_in)
+    else:
+        exit('Error: unrecognized model')
+
+    return global_model
+

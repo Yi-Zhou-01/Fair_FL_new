@@ -135,8 +135,9 @@ def plot_mean_std_rounds(data_path, rounds, save_img=None, plot_ft=False):
 if __name__ == '__main__':
     args = options.args_parser()
 
-    rounds = [2,4,6,8,10]
-    
+    # rounds = [2,4,6,8,10]
+    rounds = [2,4,6,8,10, 12,14,16]
+
     stats_path = collect_rounds(args, rounds=rounds)
 
     plot_mean_std_rounds(stats_path,rounds, save_img=True)

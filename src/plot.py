@@ -382,9 +382,10 @@ def plot_loss_ft(epoch_loss, fairfed=False, title=None, save_to=None):
     else:
         step = 1
 
+    line_wid = 1.0
     for i, ax in enumerate(axs.ravel()):
         try:
-            ax.plot(x1, epoch_loss[i], marker='o',  label= ('random client '+str(i+1)))
+            ax.plot(x1, epoch_loss[i],linewidth = line_wid, label= ('random client '+str(i+1)))
         except:
             print(i, ax, len(epoch_loss))
     

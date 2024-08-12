@@ -89,7 +89,11 @@ def args_parser():
     
     parser.add_argument('--debias', type=str, default="pp", help='Local debias approaches for new fl_new: "pp" for post-processing and "ft" for final layer fine-tuning')
     
-    parser.add_argument('--ft_alpha', type=float, default=1, help='parameter alpha used to calculate loss in final layer fine-tuning: loss = loss + alpha * loss_fairness')
+    parser.add_argument('--ft_alpha', type=float, default=1.0, help='parameter alpha used to calculate loss in final layer fine-tuning: loss = loss + alpha * loss_fairness')
+    
+    parser.add_argument('--ft_alpha2', type=float, default=1.0, help='parameter alpha used to calculate loss in final layer fine-tuning: loss = loss + alpha * loss_fairness')
+    
+    parser.add_argument('--ft_lr', type=float, default=5e-3, help='learning rate for final layer fine tuning')
     
     parser.add_argument('--ft_ep', type=int, default=5, help='Final layer fine-tuning epochs')
     

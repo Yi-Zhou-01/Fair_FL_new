@@ -40,8 +40,8 @@ class AdultDataset(Dataset):
             if subset:
                 df = df[df.index.isin(subset)]
 
-            # self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
-            self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
+            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            # self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
             self.X = self.standardlize_X(self.X)
             self.y = df[self.target].to_numpy().astype(np.float32)
             self.a = df[self.s_attr].to_numpy().astype(np.float32)
@@ -219,7 +219,7 @@ class WCLDDataset(Dataset):
 class PTBDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, df=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, platform=None, df=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "NORM"
@@ -245,8 +245,10 @@ class PTBDataset(Dataset):
 
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
             if traces:
-                if kaggle:
+                if platform=="kaggle":
                     path_to_traces = "/kaggle/input/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
+                elif platform=="azure":
+                    path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
                 else:
                     path_to_traces = os.getcwd() + "/data/ptb-xl/ptbxl_all_clean_new_100hz.hdf5"
                 f = h5py.File(path_to_traces, 'r')
@@ -295,7 +297,7 @@ class PTBDataset(Dataset):
 class NIHDataset(Dataset):
     """Students Performance dataset."""
 
-    def __init__(self, csv_file, X=None, y=None, a=None, kaggle=False, colab=False, df=None, transform=None, crop=None, subset=None, traces=True):
+    def __init__(self, csv_file, X=None, y=None, a=None, platform=None, df=None, transform=None, crop=None, subset=None, traces=True):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "Disease"
@@ -326,8 +328,10 @@ class NIHDataset(Dataset):
 
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
             if traces:
-                if kaggle:
+                if platform=="kagle":
                     self.path_to_traces = "/kaggle/input/data"
+                # elif platform=="azure":
+                #     self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_100%_256_gray_xx3_int_h5.hdf5"
                 else:
                     self.path_to_traces = "/Users/zhouyi/Desktop/Msc Project/nih-chest/png"
                 # f = h5py.File(path_to_traces, 'r')
@@ -552,11 +556,11 @@ def get_partition(platform, p_idx, dataset="adult"):
     if dataset == "nih-chest-h5":
         dataset = "nih-chest"
 
-    if get_partition=="kaggle":
+    if platform=="kaggle":
         path_root = "/kaggle/input/" + dataset + '/partition/' + str(p_idx)
-    elif get_partition=="colab":
+    elif platform=="colab":
         path_root = "/content/drive/MyDrive/Fair_FL_new/data/" + dataset + '/partition/' + str(p_idx)
-    elif get_partition=="azure":
+    elif platform=="azure":
         path_root = 'data/' + dataset + '/partition/' + str(p_idx)
     else:
         path_root = '/Users/zhouyi/Desktop/Fair_FL_new/data/' + dataset + '/partition/' + str(p_idx)
@@ -632,7 +636,7 @@ def get_dataset(args):
 
         csv_file_train = data_path+'/ptb-xl/ptbxl_all_clean_new.csv'
 
-        train_dataset = PTBDataset(csv_file_train, kaggle=args.kaggle)
+        train_dataset = PTBDataset(csv_file_train, platform=args.platform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
@@ -685,11 +689,11 @@ def get_dataset(args):
                                         ])
 
         if args.crop != 0:
-            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform, crop=args.crop)
+            train_dataset = NIHDataset(csv_file_train, platform=args.platform, transform=nih_transform, crop=args.crop)
         else:
-            train_dataset = NIHDataset(csv_file_train, kaggle=args.kaggle, colab=args.colab, transform=nih_transform)
+            train_dataset = NIHDataset(csv_file_train,platform=args.platform, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
-        partition_file = get_partition(args.kaggle, args.colab,  args.partition_idx, dataset=args.dataset)
+        partition_file = get_partition(platform=args.platform,  p_idx=args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     # elif args.dataset == 'cifar':
     #     data_dir = '../data/cifar/'
