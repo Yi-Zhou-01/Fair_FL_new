@@ -405,7 +405,9 @@ class Plain_LR_Adult(nn.Module):
         # self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.1)
     def forward(self, x):
-        prediction = sigmoid(self.final_layer(x))
+        # prediction = sigmoid(self.final_layer(x))
+
+        prediction=self.final_layer(x)
 
         return prediction
 

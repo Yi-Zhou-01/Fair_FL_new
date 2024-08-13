@@ -11,6 +11,7 @@ import torch.nn.functional as F
 import utils
 import sys
 import time
+import copy
 
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
@@ -231,7 +232,8 @@ class LocalUpdate(object):
         # self.ft = fine_tuning
 
         # self.trainloader, self.validloader, self.testloader = self.train_val_test(dataset, list(idxs))
-        self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs)
+        self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs, args.local_bs)
+        self.ft_trainloader, _, _ = self.split_w_idxs(dataset, split_idxs, args.ft_bs)
         self.device = 'cuda' if args.gpu else 'cpu'
         # Default criterion set to NLL loss function
         # self.criterion = nn.NLLLoss().to(self.device)
@@ -239,7 +241,7 @@ class LocalUpdate(object):
         self.dataset = dataset
     
    
-    def split_w_idxs(self, dataset, idxs):
+    def split_w_idxs(self, dataset, idxs, batch_size):
         train_idxs, test_idxs, val_idxs = idxs
 
         # if self.args.dataset == "ptb-xl":
@@ -253,7 +255,7 @@ class LocalUpdate(object):
         #     # print("ptb-xl Loader!")
         # else:
         trainloader = DataLoader(DatasetSplit(dataset, train_idxs),
-                                batch_size=self.args.local_bs, shuffle=True)
+                                batch_size=batch_size, shuffle=True)
         validloader = DataLoader(DatasetSplit(dataset, val_idxs),
                                 batch_size=int(len(val_idxs)/10), shuffle=False)
         testloader = DataLoader(DatasetSplit(dataset, test_idxs),
@@ -281,11 +283,13 @@ class LocalUpdate(object):
         #     optimizer = torch.optim.Adam(model.final_layer.parameters(), lr=self.args.lr,
         #                                 weight_decay=1evscode-webview://1hs7hefg7d9igdkj7jjs2g8ig9einv4iiof1dn2o9nvsvcaqja52/index.html?id=cfc1b4fd-dd94-41f2-b483-be71d2d91a99&origin=148850e9-0f3e-4859-a5fc-0508f77f5be3&swVersion=4&extensionId=vscode.media-preview&platform=electron&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=vscode-file%3A%2F%2Fvscode-app#-4)
         
+        lowest_loss=1000
+        # best_model
         for iter in range(self.args.ft_ep):
             batch_loss = []
             batch_loss_fairness = []
             batch_loss_1 = []
-            for batch_idx, (images, labels, a) in enumerate(self.trainloader):
+            for batch_idx, (images, labels, a) in enumerate(self.ft_trainloader):
                 images, labels, a = images.to(self.device), labels.to(self.device), a.to(self.device)
                 optimizer.zero_grad()  
 
@@ -322,14 +326,18 @@ class LocalUpdate(object):
                 # if batch_idx % 50 == 0:
                 #     print('{} | # {} | Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
                 #         int(time.time()), client_idx, global_round, iter, loss.item(), loss_1.item(), eod_loss.item()))
-                
+    
             print('{} | # {} | Global Round : {} | Local Epoch : {} | Loss: {:.6f}  L1|EOD:  {:.6f} | {:.6f}'.format(
                    int(time.time()), client_idx, global_round, iter, sum(batch_loss)/len(batch_loss), sum(batch_loss_1)/len(batch_loss_1), sum(batch_loss_fairness)/len(batch_loss_fairness)))
     
+            if sum(batch_loss)/len(batch_loss) < lowest_loss:
+                best_model = copy.deepcopy(model)
+                lowest_loss = sum(batch_loss)/len(batch_loss)
+
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
             # scheduler.step()
 
-        return model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
+        return best_model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
 
 
     def update_weights(self, model, global_round, client_idx=-1):

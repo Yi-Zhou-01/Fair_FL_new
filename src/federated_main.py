@@ -32,6 +32,7 @@ import models
 # import tracemalloc
 # from memory_profiler import profile
 
+import json
 
 
 from aif360.metrics import BinaryLabelDatasetMetric, ClassificationMetric
@@ -46,12 +47,9 @@ from aif360.algorithms.postprocessing import EqOddsPostprocessing
 def main():
     start_time = time.time()
 
-    # define paths
-    path_project = os.path.abspath('..')
-    logger = SummaryWriter('../logs')
-
     args = options.args_parser()
     exp_details(args)
+
 
     # if args.gpu_id:
     #     torch.cuda.set_device(args.gpu_id)
@@ -87,6 +85,18 @@ def main():
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
+
+
+    # define paths
+    logger = SummaryWriter(statistics_dir + '/logs')
+
+
+
+    with open(statistics_dir+'/args.txt', 'w') as f:
+        json.dump(args.__dict__, f, indent=2)
+
+    # with open('commandline_args.txt', 'r') as f:
+    #     args.__dict__ = json.load(f)
 
     # load dataset and user groups
     # user groups: different client datasets
