@@ -234,21 +234,24 @@ def check_train_test_split(num_clients, pred_train_dic, pred_test_dic, save_dir=
         lines.append("-")
         lines.append("Before post-processing ...")
         lines.append("             Test (%)    -    Train (%)")
-        lines.append("TPR  p:     {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_p),sum(YA_11), sum(tp_p)/sum(YA_11),\
-                                                                                     sum(tp_p_tr),sum(YA_11_tr),sum(tp_p_tr)/sum(YA_11_tr) ))
-        lines.append("TPR  unp:   {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_unp), sum(YA_10), sum(tp_unp)/sum(YA_10),\
-                                                                                     sum(tp_unp_tr),sum(YA_10_tr), sum(tp_unp_tr)/sum(YA_10_tr) ))
-        lines.append("TPR Diff         ({:.0%})          ({:.0%})".format(sum(tp_unp)/sum(YA_10)-sum(tp_p)/sum(YA_11),\
-                                                                         sum(tp_unp_tr)/sum(YA_10_tr)-sum(tp_p_tr)/sum(YA_11_tr) ))
-        lines.append("-")   
-        lines.append("After post-processing ...")
-        lines.append("             Test (%)    -    Train (%)")
-        lines.append("TPR  p:     {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_p_),sum(YA_11), sum(tp_p_)/sum(YA_11),\
-                                                                                     sum(tp_p_tr_),sum(YA_11_tr),sum(tp_p_tr_)/sum(YA_11_tr) ))
-        lines.append("TPR  unp:   {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_unp_), sum(YA_10), sum(tp_unp_)/sum(YA_10),\
-                                                                                     sum(tp_unp_tr_),sum(YA_10_tr), sum(tp_unp_tr_)/sum(YA_10_tr) ))
-        lines.append("TPR Diff         ({:.0%})          ({:.0%})".format(sum(tp_unp_)/sum(YA_10)-sum(tp_p_)/sum(YA_11),\
+        try:
+            lines.append("TPR  p:     {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_p),sum(YA_11), sum(tp_p)/sum(YA_11),\
+                                                                                        sum(tp_p_tr),sum(YA_11_tr),sum(tp_p_tr)/sum(YA_11_tr) ))
+            lines.append("TPR  unp:   {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_unp), sum(YA_10), sum(tp_unp)/sum(YA_10),\
+                                                                                        sum(tp_unp_tr),sum(YA_10_tr), sum(tp_unp_tr)/sum(YA_10_tr) ))
+            lines.append("TPR Diff         ({:.0%})          ({:.0%})".format(sum(tp_unp)/sum(YA_10)-sum(tp_p)/sum(YA_11),\
+                                                                            sum(tp_unp_tr)/sum(YA_10_tr)-sum(tp_p_tr)/sum(YA_11_tr) ))
+            lines.append("-")   
+            lines.append("After post-processing ...")
+            lines.append("             Test (%)    -    Train (%)")
+            lines.append("TPR  p:     {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_p_),sum(YA_11), sum(tp_p_)/sum(YA_11),\
+                                                                                        sum(tp_p_tr_),sum(YA_11_tr),sum(tp_p_tr_)/sum(YA_11_tr) ))
+            lines.append("TPR  unp:   {:n}/{:n} ({:.0%})     {:n}/{:n} ({:.0%})".format(sum(tp_unp_), sum(YA_10), sum(tp_unp_)/sum(YA_10),\
+                                                                                        sum(tp_unp_tr_),sum(YA_10_tr), sum(tp_unp_tr_)/sum(YA_10_tr) ))
+            lines.append("TPR Diff         ({:.0%})          ({:.0%})".format(sum(tp_unp_)/sum(YA_10)-sum(tp_p_)/sum(YA_11),\
                                                                          sum(tp_unp_tr_)/sum(YA_10_tr)-sum(tp_p_tr_)/sum(YA_11_tr) ))
+        except:
+            lines.append("Scalar error!!")
         lines.append("-")   
 
         # Number of prediction: 0 -> 1 but true label is 0

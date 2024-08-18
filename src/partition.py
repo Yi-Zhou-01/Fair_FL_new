@@ -7,6 +7,7 @@ import csv
 import matplotlib.pyplot as plt
 from dataset import AdultDataset, CompasDataset, WCLDDataset, PTBDataset, NIHDataset
 import json
+import dataset
 
 def iid_sampling(dataset, num_clients):
     """
@@ -113,6 +114,13 @@ if __name__ == '__main__':
         train_data = PTBDataset(csv_file_train, traces=False)
         target_attr = "NORM"
         print("Read from ptb-xl!")
+
+    elif args.dataset == "nih-chest-eff":
+        csv_file_train = os.getcwd()+"/data/nih-chest-eff/nih_chest_all_clean_eff.csv"
+        train_data = dataset.NIHEffDataset(csv_file_train, traces=False)
+        target_attr = "Diease"
+        print("Read from nih-eff!")
+
     elif args.dataset == "nih-chest":
         csv_file_train = os.getcwd()+"/data/nih-chest/nih_chest_all_clean.csv"
         train_data = NIHDataset(csv_file_train, traces=False)

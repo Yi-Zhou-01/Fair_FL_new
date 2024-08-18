@@ -112,6 +112,12 @@ def args_parser():
     parser.add_argument('--crop', type=int, default=0, help='run exp with the same setting with # of rep')
     
     parser.add_argument('--example_folder', default=None, help='Example folder for collecting results')
+
+    parser.add_argument('--rounds_ls', nargs="*", type=int, default=[], help='Example folder for collecting results')
+
+    parser.add_argument('--save_avg_model', type=str, default=None, help='Example folder for collecting results')
+
+    parser.add_argument('--use_saved_model', type=str, default="", help='Example folder for collecting results')
     
     args = parser.parse_args()
     return args

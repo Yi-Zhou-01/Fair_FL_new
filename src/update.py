@@ -232,8 +232,8 @@ class LocalUpdate(object):
         # self.ft = fine_tuning
 
         # self.trainloader, self.validloader, self.testloader = self.train_val_test(dataset, list(idxs))
-        self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs, args.local_bs)
-        self.ft_trainloader, _, _ = self.split_w_idxs(dataset, split_idxs, args.ft_bs)
+        self.trainloader, self.validloader, self.testloader = self.split_w_idxs(dataset, split_idxs, args.local_bs, args.dataset)
+        self.ft_trainloader, _, _ = self.split_w_idxs(dataset, split_idxs, args.ft_bs, args.dataset)
         self.device = 'cuda' if args.gpu else 'cpu'
         # Default criterion set to NLL loss function
         # self.criterion = nn.NLLLoss().to(self.device)
@@ -241,7 +241,7 @@ class LocalUpdate(object):
         self.dataset = dataset
     
    
-    def split_w_idxs(self, dataset, idxs, batch_size):
+    def split_w_idxs(self, dataset, idxs, batch_size, dataset_name=""):
         train_idxs, test_idxs, val_idxs = idxs
 
         # if self.args.dataset == "ptb-xl":
@@ -254,12 +254,19 @@ class LocalUpdate(object):
         #     testloader = BatchDataloader(dataset.X, dataset.y, dataset.a, bs=self.args.local_bs, mask=test_mask)
         #     # print("ptb-xl Loader!")
         # else:
+
+        test_bs = batch_size
+        # if "nih" in dataset_name:
+        #     test_bs = batch_size
+        # else:
+        #     test_bs = int(len(test_idxs)/10)
+
         trainloader = DataLoader(DatasetSplit(dataset, train_idxs),
                                 batch_size=batch_size, shuffle=True)
         validloader = DataLoader(DatasetSplit(dataset, val_idxs),
-                                batch_size=int(len(val_idxs)/10), shuffle=False)
+                                batch_size=test_bs, shuffle=False)
         testloader = DataLoader(DatasetSplit(dataset, test_idxs),
-                                batch_size=int(len(test_idxs)/10), shuffle=False)
+                                batch_size=test_bs, shuffle=False)
         
         return trainloader, validloader, testloader
     
@@ -337,6 +344,7 @@ class LocalUpdate(object):
             epoch_loss.append(sum(batch_loss)/len(batch_loss))
             # scheduler.step()
 
+        # return best_model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
         return best_model.state_dict(), sum(epoch_loss) / len(epoch_loss), np.asarray(epoch_loss)
 
 
@@ -361,7 +369,9 @@ class LocalUpdate(object):
                 # print("images shape: ", images.shape)
                 # print(a,b,c)
                 # images = torch.reshape(images, (b,c,a))
-                # print("images shape new: ", images.shape)
+                # print("images shape: ", images.shape)
+                # print("images shape new: ",torch.flatten(images, start_dim=1).shape)
+                # images = torch.flatten(images, start_dim=1)
                 images, labels = images.to(self.device), labels.to(self.device)
 
                 model.zero_grad()

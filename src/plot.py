@@ -138,7 +138,7 @@ def plot_all(stat_dic, title=None, save_to=None):
         plt.show()
 
 
-def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to=None):
+def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, plot_fed=True, plot_ft=True,title=None, save_to=None):
 
     # false_negative_rate_difference
 
@@ -169,7 +169,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
         ax3.axhline(-0.1, color='orange', alpha=0.4)
         ax3.plot(x, (stat_dic['test_tpr_fedavg']), color='blue', marker='o',  label='tpr_fedavg')
         ax3.plot(x, (stat_dic['test_tpr_new']),  color="red", marker='o', label='tpr_new')
-        if "ft" in args.debias:
+        if ("ft" in args.debias) and (plot_ft):
             ax3.plot(x, stat_dic['test_tpr_new_ft'], color='hotpink', marker='o',  label='tpr_new_ft')
             
         
@@ -182,7 +182,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
         ax30.axhline(-0.1, color='orange', alpha=0.4)
         ax30.plot(x, (stat_dic['test_fpr_fedavg']), color='blue', marker='o', linestyle='dashed', label='fpr_fedavg')
         ax30.plot(x, (stat_dic['test_fpr_new']),  color="red", marker='o', linestyle='dashed', label='fpr_new')
-        if "ft" in args.debias:
+        if "ft" in args.debias and (plot_ft):
             ax30.plot(x, stat_dic['test_fpr_new_ft'], color='hotpink', marker='o',  linestyle='dashed',  label='fpr_new_ft')
         
         ax30.set_title('FPR - Test')
@@ -203,7 +203,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
         ax6.axhline(-0.1, color='orange', alpha=0.4)
         ax6.plot(x, (stat_dic['train_tpr_fedavg']), color='blue', marker='o',  label='tpr_fedavg')
         ax6.plot(x, (stat_dic['train_tpr_new']),  color="red", marker='o', label='tpr_new')
-        if "ft" in args.debias:
+        if ("ft" in args.debias) and plot_ft:
             ax6.plot(x, stat_dic['train_tpr_new_ft'], color='hotpink', marker='o',  label='tpr_new_ft')
             
         
@@ -216,7 +216,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
         ax7.axhline(-0.1, color='orange', alpha=0.4)
         ax7.plot(x, (stat_dic['train_fpr_fedavg']), color='blue', marker='o', linestyle='dashed', label='fpr_fedavg')
         ax7.plot(x, (stat_dic['train_fpr_new']),  color="red", marker='o', linestyle='dashed', label='fpr_new')
-        if "ft" in args.debias:
+        if ("ft" in args.debias) and plot_ft:
             ax7.plot(x, stat_dic['train_fpr_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='fpr_new_ft')
         ax7.set_title('FPR - Train')
         ax7.set_xticks(np.arange(min(x), max(x)+1, 1.0))
@@ -235,7 +235,8 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
     # ax1.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
     ax1.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
     ax1.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
-    ax1.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
+    if plot_fed:
+        ax1.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
     # ax1.set_ylim(y_lim)
     
 
@@ -247,7 +248,8 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
 
     # ax2.axhline(0.1, color='orange', alpha=0.4)
     ax2.axhline(0.8, color='lightsteelblue', alpha=0.6)
-    ax2.plot(x, stat_dic['test_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
+    if plot_fed:
+        ax2.plot(x, stat_dic['test_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
     ax2.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
     ax2.plot(x, stat_dic['test_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
     # ax2.plot(x, stat_dic['test_eod_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='eod_new_ft')
@@ -256,7 +258,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
     # ax2.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
     # ax2.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
 
-    if not (args.dataset== "adult" or args.dataset== "compas"):
+    if( not (args.dataset== "adult" or args.dataset== "compas")) and plot_ft:
         ax2.plot(x, stat_dic['test_acc_new_ft'], color='hotpink', marker='o',  label='acc_new_ft')
         ax1.plot(x, stat_dic['test_eod_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='eod_new_ft')
 
@@ -274,7 +276,8 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
     # ax4.plot(x, stat_dic['train_acc_new'],  color="red", marker='o', label='acc_new')
     ax4.plot(x, stat_dic['train_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
     ax4.plot(x, stat_dic['train_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
-    ax4.plot(x, stat_dic['train_eod_fairfed'],  color="green", marker='o', linestyle='dashed', label='eod_fairfed')
+    if plot_fed:
+        ax4.plot(x, stat_dic['train_eod_fairfed'],  color="green", marker='o', linestyle='dashed', label='eod_fairfed')
     
     ax4.set_xlabel("Client ID")
     ax4.set_title('EOD - Train')
@@ -285,7 +288,8 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
 
     # ax5.axhline(0.1, color='orange', alpha=0.4)
     ax5.axhline(0.8, color='lightsteelblue', alpha=0.6)
-    ax5.plot(x, stat_dic['train_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
+    if plot_fed:
+        ax5.plot(x, stat_dic['train_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
     ax5.plot(x, stat_dic['train_acc_new'],  color="red", marker='o', label='acc_new')
     ax5.plot(x, stat_dic['train_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
     
@@ -293,7 +297,7 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, title=None, save_to
     # ax5.plot(x, stat_dic['train_eod_fairfed'],  color="green", marker='o', linestyle='dashed', label='eod_fairfed')
     # ax5.plot(x, stat_dic['train_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
 
-    if not (args.dataset== "adult" or args.dataset== "compas"):
+    if (not (args.dataset== "adult" or args.dataset== "compas") )and plot_ft:
         ax5.plot(x, stat_dic['train_acc_new_ft'], color='hotpink', marker='o',  label='acc_new_ft')
         ax4.plot(x, stat_dic['train_eod_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='eod_new_ft')
 

@@ -285,36 +285,35 @@ class ResNetPTB(nn.Module):
 
 
 
-class VGG(nn.Module):
+
+class ANN(nn.Module):
     def __init__(self, dim_in):
-        super(VGG, self).__init__()
+        super(ANN, self).__init__()
 
         self.input_size = dim_in
        
-        vgg_model = models.vgg19(weights='IMAGENET1K_V1')
-        # vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
-        
-
-        for p in vgg_model.parameters() : 
-            p.requires_grad = False 
-        
-        # IN_FEATURES = vgg_model.classifier[-1].in_features
-        IN_FEATURES = 25088
-        # IN_FEATURES = 1280
-
-        vgg_model.classifier = nn.Sequential(
-      
-        nn.Linear(in_features=IN_FEATURES, out_features=1024) ,
+        self.features = nn.Sequential(
+        nn.Dropout(p=0.3), 
+        nn.Linear(in_features=dim_in, out_features=4096) ,
         nn.ReLU(),
-        nn.Dropout(p=0.6), 
-        nn.Linear(in_features=1024, out_features=512) ,
+        nn.Dropout(p=0.5), 
+        nn.Linear(in_features=4096, out_features=4096) ,
         nn.ReLU(),
-        nn.Dropout(p=0.6), 
+        nn.Dropout(p=0.3), 
+        nn.Linear(in_features=4096, out_features=1024) ,
+        nn.ReLU(),
+        nn.Dropout(p=0.3), 
+        nn.Linear(in_features=1024, out_features=256) ,
+        nn.ReLU(),
+        nn.Dropout(p=0.3), 
+        nn.Linear(in_features=256, out_features=64) ,
+        # nn.AvgPool1d(),
+        # nn.Linear(in_features=50, out_features=50) ,
         )
 
-        self.features = vgg_model
+        # self.features = vgg_model
 
-        self.final_layer = nn.Linear(in_features=512 , out_features=1)
+        self.final_layer = nn.Linear(in_features=64 , out_features=1)
 
         # super(MLPAdult, self).__init__()
         # self.layer_1 = nn.Linear(in_features=32, out_features=64)
@@ -340,6 +339,98 @@ class VGG(nn.Module):
        
 
 
+
+
+
+class VGG(nn.Module):
+    def __init__(self, dim_in):
+        super(VGG, self).__init__()
+
+        # self.input_size = dim_in
+       
+        # vgg_model = models.vgg19(weights='IMAGENET1K_V1')
+        # # vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
+        
+
+        # for p in vgg_model.parameters() : 
+        #     p.requires_grad = False 
+        
+        # # IN_FEATURES = vgg_model.classifier[-1].in_features
+        # IN_FEATURES = 25088
+        # # IN_FEATURES = 1280
+
+        # vgg_model.classifier = nn.Sequential(
+      
+        # nn.Linear(in_features=IN_FEATURES, out_features=1024) ,
+        # nn.ReLU(),
+        # nn.Dropout(p=0.6), 
+        # nn.Linear(in_features=1024, out_features=512) ,
+        # nn.ReLU(),
+        # nn.Dropout(p=0.6), 
+        # )
+
+        # self.features = vgg_model
+
+        # self.final_layer = nn.Linear(in_features=512 , out_features=1)
+
+        self.input_size = dim_in
+        self.vgg19 = models.vgg19(weights='DEFAULT')
+        self.relu = nn.Sequential(
+        nn.ReLU(),
+        )
+
+        self.final_layer = nn.Linear(1000, 1)
+
+    def forward(self, x):
+        # x = self.features(x)
+        # x = (self.final_layer(x))
+        x = self.relu(self.vgg19(x))
+        x = self.final_layer(x)
+
+        return x
+
+    def get_features(self, x):
+        return self.features(x)
+    
+    def set_grad(self,val):
+        for param in self.parameters():
+            param.requires_grad = False
+        for param in self.final_layer.parameters():
+            param.requires_grad = True
+       
+
+
+
+class VGG16(nn.Module):
+    def __init__(self, dim_in):
+        super(VGG16, self).__init__()
+
+        self.input_size = dim_in
+        self.vgg16 = models.vgg16(weights='DEFAULT')
+        self.relu = nn.Sequential(
+        nn.ReLU(),
+        nn.Dropout(p=0.5), 
+        )
+
+        self.final_layer = nn.Linear(1000, 1)
+       
+    def forward(self, x):
+        x = self.relu(self.vgg16(x))
+        x = self.final_layer(x)
+        return x
+    
+    def get_features(self, x):
+        return self.vgg16(x)
+    
+    def set_grad(self, val):
+        for param in self.parameters():
+            param.requires_grad = False
+        for param in self.final_layer.parameters():
+            param.requires_grad = True
+       
+
+
+
 class MobileNet(nn.Module):
     def __init__(self, dim_in, kernel_size):
         super(MobileNet, self).__init__()
@@ -347,12 +438,13 @@ class MobileNet(nn.Module):
         self.input_size = dim_in
         self.kernel_size = kernel_size
        
-        # vgg_model = models.vgg19(weights='IMAGENET1K_V1')
         vgg_model = models.mobilenet_v2(weights='IMAGENET1K_V2')
         
 
-        for p in vgg_model.parameters() : 
-            p.requires_grad = False 
+        # for p in vgg_model.parameters() : 
+        #     p.requires_grad = False 
+        # for p in vgg_model.classifier.parameters() : 
+        #     p.requires_grad = True
         
         # IN_FEATURES = vgg_model.classifier[-1].in_features
         # IN_FEATURES = 25088
@@ -407,9 +499,9 @@ class Plain_LR_Adult(nn.Module):
     def forward(self, x):
         # prediction = sigmoid(self.final_layer(x))
 
-        prediction=self.final_layer(x)
+        x=self.final_layer(x)
 
-        return prediction
+        return x
 
     def get_features(self, x):
         return x
@@ -547,22 +639,37 @@ class modelC(nn.Module):
 def get_model(args, img_size):
 
     if args.dataset == 'ptb-xl':
-        N_LEADS = 12  # the 12 leads
-        N_CLASSES = 1  # just the age
-        seq_length = 1000
-        # net_filter_size=[64, 128, 196, 256, 320]
-        # net_seq_lengh=[4096, 1024, 256, 64, 16]
-        net_filter_size=[32, 64, 128, 196, 256]
-        net_seq_lengh=[1000, 500, 250, 125, 25]
-        dropout_rate=0.8
-        kernel_size=17
-        global_model = ResNetPTB(input_dim=(N_LEADS, seq_length),
-                        blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
-                        n_classes=N_CLASSES,
-                        kernel_size=kernel_size,
-                        dropout_rate=dropout_rate)
-    
-    elif args.dataset == 'nih-chest' or args.dataset == 'nih-chest-h5':
+        if args.model == "mobile":
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+            kernel_size = 17
+            global_model = MobileNet(dim_in=len_in, kernel_size=kernel_size)
+
+        elif args.model == "ann":
+            len_in = 1
+            for x in img_size:
+                len_in *= x
+            kernel_size = 17
+            global_model = ANN(dim_in=len_in)
+
+        else:
+            N_LEADS = 12  # the 12 leads
+            N_CLASSES = 1  # just the age
+            seq_length = 1000
+            # net_filter_size=[64, 128, 196, 256, 320]
+            # net_seq_lengh=[4096, 1024, 256, 64, 16]
+            net_filter_size=[32, 64, 128, 196, 256]
+            net_seq_lengh=[1000, 500, 250, 125, 25]
+            dropout_rate=0.5
+            kernel_size=17
+            global_model = ResNetPTB(input_dim=(N_LEADS, seq_length),
+                            blocks_dim=list(zip(net_filter_size, net_seq_lengh)),
+                            n_classes=N_CLASSES,
+                            kernel_size=kernel_size,
+                            dropout_rate=dropout_rate)
+
+    elif args.dataset == 'nih-chest' or args.dataset == 'nih-chest-h5' or args.dataset == 'nih-chest-eff':
         N_CLASSES = 1  # just the age
         seq_length = 256
         # net_filter_size=[64, 128, 196, 256, 320]
@@ -572,7 +679,9 @@ def get_model(args, img_size):
         # net_seq_lengh=[256, 128, 64, 32, 16]
         # dropout_rate=0.8
         kernel_size=17
-        if args.model == 'vgg':
+        if args.model == 'vgg16':
+            global_model = VGG16(dim_in=(seq_length, seq_length))
+        elif args.model == 'vgg':
             global_model = VGG(dim_in=(seq_length, seq_length))
         elif args.model == 'mobile':
             global_model = MobileNet(dim_in=(seq_length, seq_length), kernel_size=kernel_size)
@@ -584,14 +693,14 @@ def get_model(args, img_size):
         #         dropout_rate=dropout_rate)
 
         
-    elif args.model == 'cnn':
-        # Convolutional neural netork
-        if args.dataset == 'mnist':
-            global_model = CNNMnist(args=args)
-        elif args.dataset == 'fmnist':
-            global_model = CNNFashion_Mnist(args=args)
-        elif args.dataset == 'cifar':
-            global_model = CNNCifar(args=args)
+    # elif args.model == 'cnn':
+    #     # Convolutional neural netork
+    #     if args.dataset == 'mnist':
+    #         global_model = CNNMnist(args=args)
+    #     elif args.dataset == 'fmnist':
+    #         global_model = CNNFashion_Mnist(args=args)
+    #     elif args.dataset == 'cifar':
+    #         global_model = CNNCifar(args=args)
 
     elif args.model == 'mlp':
         # Multi-layer preceptron
@@ -603,8 +712,8 @@ def get_model(args, img_size):
                 len_in *= x
                 # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
                 #                 dim_out=args.num_classes)
-                global_model = MLPAdult2(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
+            global_model = MLPAdult2(dim_in=len_in, dim_hidden=64,
+                            dim_out=args.num_classes)
         
         elif args.dataset == 'compas':
             # img_size = train_dataset[0][0].shape
@@ -613,8 +722,9 @@ def get_model(args, img_size):
                 len_in *= x
                 # global_model = MLPAdult(dim_in=len_in, dim_hidden=64,
                 #                 dim_out=args.num_classes)
-                global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
-                                dim_out=args.num_classes)
+            global_model = MLPCompas(dim_in=len_in, dim_hidden=64,
+                            dim_out=args.num_classes)
+            
         elif args.dataset == 'wcld':
             # img_size = train_dataset[0][0].shape
             len_in = 1

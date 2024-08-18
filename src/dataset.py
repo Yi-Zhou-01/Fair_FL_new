@@ -40,8 +40,8 @@ class AdultDataset(Dataset):
             if subset:
                 df = df[df.index.isin(subset)]
 
-            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
-            # self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
+            # self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
             self.X = self.standardlize_X(self.X)
             self.y = df[self.target].to_numpy().astype(np.float32)
             self.a = df[self.s_attr].to_numpy().astype(np.float32)
@@ -223,7 +223,8 @@ class PTBDataset(Dataset):
         """Initializes instance of class Compas Dataset.
         """
         self.target = "NORM"
-        self.s_attr = "sex"
+        # self.s_attr = "sex"
+        self.s_attr = "age>60"
         self.name = "ptb-xl"
 
         if X is None:
@@ -232,7 +233,7 @@ class PTBDataset(Dataset):
             else:
                 df = pd.read_csv(csv_file, index_col=False)#[:1000] #.drop("Unnamed: 0", axis=1)
                 # print("self.df: ", self.df[:5])
-                columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM"]
+                columns = ["record_id", "ecg_id","patient_id","age","sex", "NORM", "age>60"]
                 df = df.loc[:, df.columns.isin(columns)]
             if crop:
                 df = df[:crop]
@@ -259,6 +260,8 @@ class PTBDataset(Dataset):
 
             self.y = df[self.target].to_numpy().astype(np.float32)
             self.a = df[self.s_attr].to_numpy().astype(np.float32)
+
+            print("Check dataset YA==11: ", sum(self.y * self.a), sum(self.y), sum(self.a) )
 
             # self.X = self.standardlize_X(self.X)
             
@@ -288,6 +291,7 @@ class PTBDataset(Dataset):
 
         if s_att:
             return [self.X[idx], self.y[idx], self.a[idx]]
+            # return [self.X[idx].flatten(), self.y[idx], self.a[idx]]
         else:
             return [self.X[idx], self.y[idx]]
 
@@ -443,22 +447,6 @@ class NIHDataset2(Dataset):
                 self.X = np.array(f["images"][:]) #.astype(np.float32) #[:1000] 
                 print("shape self.X: ", self.X.shape)
                 print("sys.getsizeof: ", sys.getsizeof(self.X))
-                # print("path: ", self.path_to_traces)
-                # print("getting f1...")
-                # f1 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # print("getting f2...")
-                # f2 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # print("getting f3...")
-                # f3 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # print("getting f4...")
-                # f4 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # print("getting f5...")
-                # f5 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # print("getting f6...")
-                # f6 = np.array(h5py.File(self.path_to_traces, 'r')["images"][:])#.astype(np.float32)
-                # self.X = np.concatenate((f1,f2,f3,f4,f5,f6))
-                # print("f1.shape: ", f1.shape)
-                # print("self.X.shape: ", self.X.shape)
             else:
                 self.path_to_traces = None
             
@@ -520,6 +508,113 @@ class NIHDataset2(Dataset):
             return [img, self.y[idx]]
 
 
+
+class NIHEffDataset(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, X=None, y=None, a=None, platform="", transform=None, df=None, crop=None, subset=None, traces=True):
+        """Initializes instance of class Compas Dataset.
+        """
+        self.target = "Disease"
+        # self.s_attr = "age>50"
+        self.s_attr = "Patient Gender"
+        self.name = "nih-chest-eff"
+        self.transform = transform
+
+        if X is None:
+            if df is not None:
+                df = df
+            else:
+                df = pd.read_csv(csv_file, index_col=False)#[:1000] #.drop("Unnamed: 0", axis=1)
+                # print("self.df: ", self.df[:5])
+                columns = ["Image Index", "Patient Gender","Disease","Multi_label", "folder_name", "age>50", "age>60"]
+                df = df.loc[:, df.columns.isin(columns)]
+            
+            # if platform == "":
+            #     crop = 500
+
+
+
+            if subset:
+                df = df[df.index.isin(subset)]
+
+            # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+            # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+            if traces:
+                if platform=="kaggle":
+                    # self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_rgb_xx3_int_h5.hdf5"
+                    self.path_to_traces = "/kaggle/input/nih-chest/nih_chest_100_256_gray_xx3_int_h5.hdf5"
+                elif platform=="colab":
+                    self.path_to_traces = "/content/drive/MyDrive/Fair_FL_new/data/nih-chest/nih_chest_100%_256_gray_xx3_int_h5.hdf5"
+                elif platform=="azure":
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest-eff/nih_chest_eff_256_gray_xx3_int_h5.hdf5"
+                else:
+                    self.path_to_traces =  os.getcwd() + "/data/nih-chest/nih_chest_eff_256_gray_xx3_int_h5.hdf5"
+                
+                print("getting f...")
+                f = h5py.File(self.path_to_traces, 'r')
+                self.X = np.array(f["images"][:]) #.astype(np.float32) #[:1000] 
+                print("shape self.X: ", self.X.shape)
+                print("sys.getsizeof: ", sys.getsizeof(self.X))
+            else:
+                self.path_to_traces = None
+            
+            if crop:
+                df = df[:crop]
+                self.X = self.X[:crop]
+            
+            # self.X = df["Image Index"].to_numpy()
+            self.y = df[self.target].to_numpy().astype(np.float32)
+            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+            # self.folder_name = df["folder_name"].to_numpy()
+            # self.X = self.standardlize_X(self.X)
+
+        else:
+            if isinstance(X,(np.ndarray)):
+                self.X = X.astype(np.float32)
+            else:
+                self.X = X.to_numpy().astype(np.float32)
+            # self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
+
+        self.size = len(self.y)
+
+        # X = torch.from_numpy(X).type(torch.float) # better way of doing it 
+        # y = torch.from_numpy(y).type(torch.float)
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+            print("list index ")
+        # return [self.X.iloc[idx].values, self.y[idx]]
+ 
+        
+        # folder_name = self.folder_name[idx]
+        img = self.X[idx].astype(np.float32)/255
+        # print(img.shape)
+        img = np.repeat(img, 3, axis=-1)
+        # img_path = self.path_to_traces + "/" + folder_name + "/images/" + img_name
+        # img_path = self.path_to_traces + "/" +  img_name
+        
+        # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        # img = cv2.imread(img_path)
+        # img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        # img = cv2.resize(img, dsize=(256, 256), interpolation=cv2.INTER_CUBIC)
+
+        # print(img)
+
+        if self.transform:
+            img = self.transform(img)
+            # print(img)
+
+        if s_att:
+            return [img, self.y[idx], self.a[idx]]
+        else:
+            return [img, self.y[idx]]
 
 
 
@@ -634,7 +729,7 @@ def get_dataset(args):
     
     elif args.dataset == 'ptb-xl':
 
-        csv_file_train = data_path+'/ptb-xl/ptbxl_all_clean_new.csv'
+        csv_file_train = data_path+'/ptb-xl/ptbxl_all_clean_new_2.csv'
 
         train_dataset = PTBDataset(csv_file_train, platform=args.platform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
@@ -666,6 +761,35 @@ def get_dataset(args):
             train_dataset = NIHDataset2(csv_file_train, platform=args.platform, transform=nih_transform, crop=args.crop)
         else:
             train_dataset = NIHDataset2(csv_file_train, platform=args.platform, transform=nih_transform)
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
+        partition_file = get_partition( platform=args.platform, p_idx=args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
+
+
+    elif args.dataset == 'nih-chest-eff':
+        # if not args.kaggle:
+        #     data_path = "/Users/zhouyi/Desktop/Msc Project"
+        csv_file_train = data_path+'/nih-chest-eff/nih_chest_all_clean_eff.csv'
+
+        nih_mean = [0.485, 0.456, 0.406] 
+        nih_std = [0.229, 0.224, 0.225]
+        pretrained_size = 256
+       
+
+
+        # nih_transform = transforms.Compose([transforms.ToTensor(),
+        #                                     transforms.Normalize(mean=nih_mean, std=nih_std)
+        #                                    ])
+        nih_transform = transforms.Compose([transforms.ToTensor(),
+                                            # transforms.Resize(pretrained_size),
+                                            transforms.Normalize(mean=[nih_mean[0], nih_mean[1], nih_mean[2]],
+                                                                  std=[nih_std[0], nih_std[1], nih_std[2]])
+                                           ])
+
+        if args.crop != 0:
+            train_dataset = NIHEffDataset(csv_file_train, platform=args.platform, transform=nih_transform, crop=args.crop)
+        else:
+            train_dataset = NIHEffDataset(csv_file_train, platform=args.platform, transform=nih_transform)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition( platform=args.platform, p_idx=args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
