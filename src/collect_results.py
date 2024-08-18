@@ -128,6 +128,13 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
         print("Loaded stats saved in: ", data_path)
     
 
+    with open(data_path.split("stats_multi_exp")[0] +"stats_mean_std.txt", "a") as w_file:
+        for key in stats_all.keys():
+            w_file.write(key+"\n")
+            w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)))
+            w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+            w_file.write("\n")
+
     fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10, 4))
     X = list(range(1,len(stats_all["test_eod_new"][0])+1))
 
@@ -149,6 +156,11 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     ax1.fill_between(X, np.mean(target_data_3, axis=0) - np.std(target_data_3, axis=0),np.mean(target_data_3, axis=0) + np.std(target_data_3, axis=0), color='green', alpha=alpha)
 
 
+    target_data_31 = stats_all["test_eod_new_ft"]
+    ax1.plot(X, np.mean(target_data_31, axis=0), color='hotpink', label='Fine-Tuning', linewidth = line_wid)
+    ax1.fill_between(X, np.mean(target_data_31, axis=0) - np.std(target_data_31, axis=0),np.mean(target_data_31, axis=0) + np.std(target_data_31, axis=0), color='hotpink', alpha=alpha)
+
+
 
     target_data_4 = stats_all["test_acc_new"]
     ax2.plot(X, np.mean(target_data_4, axis=0),color='red', label='Our method', linestyle='dashed', linewidth = line_wid)
@@ -163,6 +175,10 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     target_data_6 = stats_all["test_acc_fairfed"]
     ax2.plot(X, np.mean(target_data_6, axis=0), color='green', label='FairFed',linestyle='dashed', linewidth = line_wid)
     ax2.fill_between(X, np.mean(target_data_6, axis=0) - np.std(target_data_6, axis=0),np.mean(target_data_6, axis=0) + np.std(target_data_6, axis=0), color='lightgreen', alpha=alpha)
+
+    target_data_7 = stats_all["test_acc_new_ft"]
+    ax2.plot(X, np.mean(target_data_7, axis=0), color='hotpink', label='Fine-Tuning',linestyle='dashed', linewidth = line_wid)
+    ax2.fill_between(X, np.mean(target_data_7, axis=0) - np.std(target_data_7, axis=0),np.mean(target_data_7, axis=0) + np.std(target_data_7, axis=0), color='hotpink', alpha=alpha)
 
 
     title = data_path.split("/")[-2]

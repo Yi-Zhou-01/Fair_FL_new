@@ -136,7 +136,11 @@ if __name__ == '__main__':
     args = options.args_parser()
 
     # rounds = [2,4,6,8,10]
-    rounds = [2,4,6,8,10, 12,14,16]
+    # rounds = [2,4,6,8,10, 12,14,16]
+    # rounds=[10,20,28,36]
+    # rounds=[18,24,30]
+    # rounds=[10, 15, 20, 25, 30, 35]
+    rounds=args.rounds_ls
 
     stats_path = collect_rounds(args, rounds=rounds)
 
