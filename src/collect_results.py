@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import options
 import pickle
 
-def collect_n_save_results(args):
+def collect_n_save_results(args, tpfp=False):
 
     if args.platform=="kaggle":
         stat_dir = "/kaggle/working/statistics"
@@ -23,9 +23,13 @@ def collect_n_save_results(args):
     if args.example_folder:
         target_exp = args.example_folder
     else:
-        target_exp = '{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
-            format(args.dataset, args.model, args.frac, args.num_users,
-                args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
+        target_exp = '{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}'.\
+        format(args.dataset, args.model, args.frac, args.num_users,
+               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs)    # <------------- iid tobeadded
+     
+        # target_exp = '{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
+        #     format(args.dataset, args.model, args.frac, args.num_users,
+        #         args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
      
     print("target_exp: ", target_exp)
     
@@ -47,6 +51,11 @@ def collect_n_save_results(args):
     test_eod_new_ft=[]
     test_acc_new_ft=[]
 
+    test_tpr_new=[]
+    test_tpr_fedavg=[]
+    test_fpr_new=[]
+    test_fpr_fedavg=[]
+
     for folder in exp_ls:
         csv_file = exp_dir + "/" + folder + "/stats.csv"
 
@@ -62,6 +71,12 @@ def collect_n_save_results(args):
         test_eod_new_ft.append(df["test_eod_new_ft"])
         test_acc_new_ft.append(df["test_acc_new_ft"])
         # print(df[:5])
+        if tpfp:
+            test_tpr_new.append(df["test_tpr_new"])
+            test_tpr_fedavg.append(df["test_tpr_fedavg"])
+            test_fpr_new.append(df["test_fpr_new"])
+            test_fpr_fedavg.append(df["test_fpr_fedavg"])
+
 
     stats_multi_exp = dict.fromkeys(["test_eod_new", "test_acc_new", "test_eod_fedavg", "test_acc_fedavg"], [])
     stats_multi_exp["test_eod_new"] = test_eod_new
@@ -75,9 +90,20 @@ def collect_n_save_results(args):
     stats_multi_exp["test_acc_new_ft"] = test_acc_new_ft
     stats_multi_exp["test_eod_new_ft"] = test_eod_new_ft
 
+    if tpfp:
+        stats_multi_exp["test_tpr_new"] = test_tpr_new
+        stats_multi_exp["test_tpr_fedavg"] = test_tpr_fedavg
+        stats_multi_exp["test_fpr_new"] = test_fpr_new
+        stats_multi_exp["test_fpr_fedavg"] = test_fpr_fedavg
+    
+    print(np.array(test_acc_fedavg))
     print(np.array(test_acc_new))
-    print(np.array(test_eod_new))
     print(np.array(test_eod_fedavg))
+    print(np.array(test_eod_new))
+    print("--- fedavg tpr; fpr ---")
+    print(np.array(test_tpr_fedavg))
+    print(np.array(test_fpr_fedavg))
+    
     # print(np.mean(test_acc_new_all, axis=0))
     # print(np.std(test_acc_new_all, axis=0))
 
@@ -131,7 +157,7 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     with open(data_path.split("stats_multi_exp")[0] +"stats_mean_std.txt", "a") as w_file:
         for key in stats_all.keys():
             w_file.write(key+"\n")
-            w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)))
+            w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) + "\n")
             w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
             w_file.write("\n")
 
@@ -205,11 +231,89 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     
 
 
+def plot_tp_fp(data_path, save_img=None, plot_ft=False):
+
+    with open(data_path, 'rb') as inp:
+        stats_all = pickle.load(inp)
+        print("Loaded stats saved in: ", data_path)
+    
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10, 4))
+    X = list(range(1,len(stats_all["test_eod_new"][0])+1))
+
+    line_wid = 1.5
+    alpha = 0.2
+
+    target_data_1 = stats_all["test_tpr_new"]
+    ax1.plot(X, np.mean(target_data_1, axis=0), color='red', label='Our method', linewidth = line_wid)
+    ax1.fill_between(X, np.mean(target_data_1, axis=0) - np.std(target_data_1, axis=0),np.mean(target_data_1, axis=0) + np.std(target_data_1, axis=0), color='red', alpha=alpha)
+
+
+    target_data_2 = stats_all["test_tpr_fedavg"]
+    ax1.plot(X, np.mean(target_data_2, axis=0), color='blue', label='FedAvg', linewidth = line_wid)
+    ax1.fill_between(X, np.mean(target_data_2, axis=0) - np.std(target_data_2, axis=0),np.mean(target_data_2, axis=0) + np.std(target_data_2, axis=0), color='navy', alpha=alpha)
+
+
+    # target_data_3 = stats_all["test_eod_fairfed"]
+    # ax1.plot(X, np.mean(target_data_3, axis=0), color='green', label='FairFed', linewidth = line_wid)
+    # ax1.fill_between(X, np.mean(target_data_3, axis=0) - np.std(target_data_3, axis=0),np.mean(target_data_3, axis=0) + np.std(target_data_3, axis=0), color='green', alpha=alpha)
+
+
+    # target_data_31 = stats_all["test_eod_new_ft"]
+    # ax1.plot(X, np.mean(target_data_31, axis=0), color='hotpink', label='Fine-Tuning', linewidth = line_wid)
+    # ax1.fill_between(X, np.mean(target_data_31, axis=0) - np.std(target_data_31, axis=0),np.mean(target_data_31, axis=0) + np.std(target_data_31, axis=0), color='hotpink', alpha=alpha)
+
+
+
+    target_data_4 = stats_all["test_fpr_new"]
+    ax2.plot(X, np.mean(target_data_4, axis=0),color='red', label='Our method', linestyle='dashed', linewidth = line_wid)
+    ax2.fill_between(X, np.mean(target_data_4, axis=0) - np.std(target_data_4, axis=0),np.mean(target_data_4, axis=0) + np.std(target_data_4, axis=0), color='pink', alpha=alpha)
+
+
+    target_data_5 = stats_all["test_fpr_fedavg"]
+    ax2.plot(X, np.mean(target_data_5, axis=0), color='blue', label='FedAvg',linestyle='dashed', linewidth = line_wid)
+    ax2.fill_between(X, np.mean(target_data_5, axis=0) - np.std(target_data_5, axis=0),np.mean(target_data_5, axis=0) + np.std(target_data_5, axis=0), color='lightblue', alpha=alpha)
+
+
+    # target_data_6 = stats_all["test_acc_fairfed"]
+    # ax2.plot(X, np.mean(target_data_6, axis=0), color='green', label='FairFed',linestyle='dashed', linewidth = line_wid)
+    # ax2.fill_between(X, np.mean(target_data_6, axis=0) - np.std(target_data_6, axis=0),np.mean(target_data_6, axis=0) + np.std(target_data_6, axis=0), color='lightgreen', alpha=alpha)
+
+    # target_data_7 = stats_all["test_acc_new_ft"]
+    # ax2.plot(X, np.mean(target_data_7, axis=0), color='hotpink', label='Fine-Tuning',linestyle='dashed', linewidth = line_wid)
+    # ax2.fill_between(X, np.mean(target_data_7, axis=0) - np.std(target_data_7, axis=0),np.mean(target_data_7, axis=0) + np.std(target_data_7, axis=0), color='hotpink', alpha=alpha)
+
+
+    title = data_path.split("/")[-2]
+    # ax1.set_title(title)
+    fig.suptitle(title, fontsize=12)
+    ax1.legend(loc='best')
+    # ax.set_ylim([0.88,1.02])
+    ax1.set_ylabel("TPR")
+    ax2.set_ylabel("FPR")
+    ax1.set_xlabel("Client #")
+    ax2.set_xlabel("Client #")
+    ax1.set_xticks(np.arange(min(X), max(X)+1, 1.0))
+    ax2.set_xticks(np.arange(min(X), max(X)+1, 1.0))
+
+    # ax2.axhline(0.8, color='lightsteelblue', alpha=0.6)
+    ax1.axhline(0.1, color='orange', alpha=0.4)
+    ax1.axhline(0.0, color='black', alpha=0.6)
+    ax2.axhline(0.1, color='orange', alpha=0.4)
+
+    
+    if save_img:
+        save_to = data_path.split("stats_multi_exp")[0] + "all_exp_stats_tpfp_plot.png"
+        plt.savefig(save_to)
+        print("Stats plot successfully saved in: {} !".format(save_to))
+ 
+
 
 if __name__ == '__main__':
     args = options.args_parser()
 
-    stats_path = collect_n_save_results(args)
+    stats_path = collect_n_save_results(args, tpfp=True)
 
     plot_mean_std(stats_path, save_img=True)
+
+    plot_tp_fp(stats_path, save_img=True)
     
