@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 
 import options
 import pickle
+import dataset
 
+'''
 def collect_n_save_results(args, tpfp=False):
 
     if args.platform=="kaggle":
@@ -117,6 +119,7 @@ def collect_n_save_results(args, tpfp=False):
     print("Successfully saved in: "+save_to_file )
 
     return save_to_file
+'''
 
 
     # # plot stats
@@ -145,9 +148,85 @@ def collect_n_save_results(args, tpfp=False):
     #            args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.rep)    # <------------- iid tobeadded
      
 
-    return None
+    # return None
 
-def plot_mean_std(data_path, save_img=None, plot_ft=False):
+
+
+def collect_n_save_results(args, tpfp=False):
+
+    if args.platform=="kaggle":
+        stat_dir = "/kaggle/working/statistics"
+    elif args.platform=="colab":
+        stat_dir = "/content/drive/MyDrive/Fair_FL_new/save/statistics"
+    elif args.platform=="azure":
+        stat_dir = os.getcwd() + '/save/statistics'
+    else:
+        stat_dir =  os.getcwd() + '/save/statistics'
+
+    exp_dir = stat_dir + "/" + str(args.idx)
+
+    if args.example_folder:
+        target_exp = args.example_folder
+    else:
+        target_exp = '{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}'.\
+        format(args.dataset, args.model, args.frac, args.num_users,
+               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs)    # <------------- iid tobeadded
+     
+        # target_exp = '{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
+        #     format(args.dataset, args.model, args.frac, args.num_users,
+        #         args.lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep)    # <------------- iid tobeadded
+     
+    print("target_exp: ", target_exp)
+    
+    exp_ls = [ exp_folder for exp_folder in os.listdir(exp_dir) if (target_exp in exp_folder) and ("stats" not in exp_folder)]
+    
+    print("Using results in folders: ")
+    print(exp_ls)
+
+
+    stats_multi_exp={}
+
+    for folder in exp_ls:
+        csv_file = exp_dir + "/" + folder + "/stats.csv"
+
+        df = pd.read_csv(csv_file)
+
+        for col in df.columns:
+            if col not in stats_multi_exp.keys():
+                stats_multi_exp[col] = []
+
+            stats_multi_exp[col].append(df[col])
+
+    # Save all stats to object
+    save_to_dir = "{}/{}_{}".format(exp_dir, "stats", target_exp)
+    os.makedirs(save_to_dir, exist_ok=True)
+    save_to_file = save_to_dir+"/stats_multi_exp.pkl"
+    with open(save_to_file, 'wb') as outp:
+        pickle.dump(stats_multi_exp, outp, pickle.HIGHEST_PROTOCOL)
+
+    print("Successfully saved in: "+save_to_file )
+
+
+    return save_to_file
+
+
+def get_client_sizes(args):
+    partition_file = dataset.get_partition(args.platform, args.partition_idx, dataset=args.dataset)
+    user_groups =  np.load(partition_file, allow_pickle=True).item()
+    # print(user_groups)
+    client_size_ls = [len(user_groups[i]) for i in range(len(user_groups))]
+
+    return client_size_ls
+
+
+def compute_weighted_mean(ls, client_size_ls):
+    weighted_acc = []
+    for i in range(len(ls)):
+        weighted_acc.append(ls[i] * (client_size_ls[i]/sum(client_size_ls)))
+    return sum(weighted_acc)
+        
+    
+def plot_mean_std(data_path, client_size_ls, save_img=None, plot_ft=False):
 
     with open(data_path, 'rb') as inp:
         stats_all = pickle.load(inp)
@@ -155,11 +234,30 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     
 
     with open(data_path.split("stats_multi_exp")[0] +"stats_mean_std.txt", "a") as w_file:
+        w_file.write("******** train ********\n")
         for key in stats_all.keys():
-            w_file.write(key+"\n")
-            w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) + "\n")
-            w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
-            w_file.write("\n")
+            if "train" in key:
+                w_file.write(key+"\n")
+                w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
+                             + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")
+                w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+                w_file.write("\n")
+        w_file.write("\n******** test ACC ********\n")
+        for key in stats_all.keys():
+            if "test_acc" in key:
+                w_file.write(key+"\n")
+                w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
+                             + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")
+                w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+                w_file.write("\n")
+        w_file.write("\n******** test EOD ********\n")
+        for key in stats_all.keys():
+            if "test_eod" in key:
+                w_file.write(key+"\n")
+                w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
+                             + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")
+                w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+                w_file.write("\n")
 
     fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10, 4))
     X = list(range(1,len(stats_all["test_eod_new"][0])+1))
@@ -182,6 +280,11 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
     ax1.fill_between(X, np.mean(target_data_3, axis=0) - np.std(target_data_3, axis=0),np.mean(target_data_3, axis=0) + np.std(target_data_3, axis=0), color='green', alpha=alpha)
 
 
+    target_data_3 = stats_all["test_eod_fairfed_rep"]
+    ax1.plot(X, np.mean(target_data_3, axis=0), color='orange', label='FairFed_rep', linewidth = line_wid)
+    ax1.fill_between(X, np.mean(target_data_3, axis=0) - np.std(target_data_3, axis=0),np.mean(target_data_3, axis=0) + np.std(target_data_3, axis=0), color='orange', alpha=alpha)
+
+
     target_data_31 = stats_all["test_eod_new_ft"]
     ax1.plot(X, np.mean(target_data_31, axis=0), color='hotpink', label='Fine-Tuning', linewidth = line_wid)
     ax1.fill_between(X, np.mean(target_data_31, axis=0) - np.std(target_data_31, axis=0),np.mean(target_data_31, axis=0) + np.std(target_data_31, axis=0), color='hotpink', alpha=alpha)
@@ -200,7 +303,11 @@ def plot_mean_std(data_path, save_img=None, plot_ft=False):
 
     target_data_6 = stats_all["test_acc_fairfed"]
     ax2.plot(X, np.mean(target_data_6, axis=0), color='green', label='FairFed',linestyle='dashed', linewidth = line_wid)
-    ax2.fill_between(X, np.mean(target_data_6, axis=0) - np.std(target_data_6, axis=0),np.mean(target_data_6, axis=0) + np.std(target_data_6, axis=0), color='lightgreen', alpha=alpha)
+    ax2.fill_between(X, np.mean(target_data_6, axis=0) - np.std(target_data_6, axis=0),np.mean(target_data_6, axis=0) + np.std(target_data_6, axis=0), color='green', alpha=alpha)
+
+    target_data_6 = stats_all["test_acc_fairfed_rep"]
+    ax2.plot(X, np.mean(target_data_6, axis=0), color='orange', label='FairFed_rep',linestyle='dashed', linewidth = line_wid)
+    ax2.fill_between(X, np.mean(target_data_6, axis=0) - np.std(target_data_6, axis=0),np.mean(target_data_6, axis=0) + np.std(target_data_6, axis=0), color='orange', alpha=alpha)
 
     target_data_7 = stats_all["test_acc_new_ft"]
     ax2.plot(X, np.mean(target_data_7, axis=0), color='hotpink', label='Fine-Tuning',linestyle='dashed', linewidth = line_wid)
@@ -312,8 +419,9 @@ if __name__ == '__main__':
     args = options.args_parser()
 
     stats_path = collect_n_save_results(args, tpfp=True)
+    client_size_ls = get_client_sizes(args)
 
-    plot_mean_std(stats_path, save_img=True)
+    plot_mean_std(stats_path, client_size_ls, save_img=True)
 
     plot_tp_fp(stats_path, save_img=True)
     
