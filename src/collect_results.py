@@ -168,9 +168,9 @@ def collect_n_save_results(args, tpfp=False):
     if args.example_folder:
         target_exp = args.example_folder
     else:
-        target_exp = '{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}'.\
+        target_exp = '{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}_fta_{}{}'.\
         format(args.dataset, args.model, args.frac, args.num_users,
-               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs)    # <------------- iid tobeadded
+               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs, args.ft_alpha,args.ft_alpha2)    # <------------- iid tobeadded
      
         # target_exp = '{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
         #     format(args.dataset, args.model, args.frac, args.num_users,
@@ -234,6 +234,8 @@ def plot_mean_std(data_path, client_size_ls, save_img=None, plot_ft=False):
     
 
     with open(data_path.split("stats_multi_exp")[0] +"stats_mean_std.txt", "a") as w_file:
+        w_file.write("******** client_size_ls ********\n")
+        w_file.write(str(client_size_ls)+"\n")
         w_file.write("******** train ********\n")
         for key in stats_all.keys():
             if "train" in key:
@@ -253,6 +255,23 @@ def plot_mean_std(data_path, client_size_ls, save_img=None, plot_ft=False):
         w_file.write("\n******** test EOD ********\n")
         for key in stats_all.keys():
             if "test_eod" in key:
+                w_file.write(key+"\n")
+                w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
+                             + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")
+                w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+                w_file.write("\n")
+        w_file.write("\n******** test TPR ********\n")
+        for key in stats_all.keys():
+            if "test_tpr" in key:
+                w_file.write(key+"\n")
+                w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
+                             + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")
+                w_file.write("\tstd: "+ str(np.std(stats_all[key], axis=0)))
+                w_file.write("\n")
+
+        w_file.write("\n******** test FPR ********\n")
+        for key in stats_all.keys():
+            if "test_fpr" in key:
                 w_file.write(key+"\n")
                 w_file.write("\tmean: " + str(np.mean(stats_all[key], axis=0)) +" Avg "+ str(np.mean(stats_all[key])) \
                              + "  w_avg " +  str(np.mean([compute_weighted_mean(ls, client_size_ls) for ls in stats_all[key]])) + "\n")

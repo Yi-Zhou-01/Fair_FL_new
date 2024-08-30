@@ -31,9 +31,9 @@ def collect_rounds(args, rounds=[2]):
     # dict.fromkeys(["test_eod_new", "test_acc_new", "test_eod_fedavg", "test_acc_fedavg", "test_acc_fairfed", "test_eod_fairfed"], [])
 
     for round_idx in rounds:
-        target_exp = 'stats_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}'.\
+        target_exp = 'stats_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}_fta_{}{}'.\
         format(args.dataset, args.model, args.frac, args.num_users,
-               args.lr, args.ft_lr, args.partition_idx, args.beta, round_idx, args.local_ep, round_idx, args.ft_ep, args.local_bs, args.ft_bs)    # <------------- iid tobeadded
+               args.lr, args.ft_lr, args.partition_idx, args.beta, round_idx, args.local_ep, round_idx, args.ft_ep, args.local_bs, args.ft_bs, args.ft_alpha,args.ft_alpha2, )    # <------------- iid tobeadded
      
         # target_exp = 'stats_{}_{}_frac{}_client{}_lr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}'.\
         #     format(args.dataset, args.model, args.frac, args.num_users,
