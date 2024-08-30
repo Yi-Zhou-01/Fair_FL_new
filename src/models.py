@@ -497,10 +497,8 @@ class Plain_LR_Adult(nn.Module):
         # self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.1)
     def forward(self, x):
-        # prediction = sigmoid(self.final_layer(x))
-
-        x=self.final_layer(x)
-
+        x = sigmoid(self.final_layer(x))
+        # x=self.final_layer(x)
         return x
 
     def get_features(self, x):
@@ -508,6 +506,33 @@ class Plain_LR_Adult(nn.Module):
     
     def set_grad(self,val):
         return True
+
+class Plain_LR_2(nn.Module):
+    def __init__(self, dim_in):
+        super(Plain_LR_2, self).__init__()
+        
+        self.features = nn.Sequential(
+            nn.Linear(in_features=dim_in, out_features=dim_in),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+        )
+
+        self.final_layer = nn.Linear(dim_in, 1)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = sigmoid(self.final_layer(x))
+        # x=self.final_layer(x)
+        return x
+
+    def get_features(self, x):
+        return self.features(x)
+    
+    def set_grad(self,val):
+        for param in self.parameters():
+            param.requires_grad = False
+        for param in self.final_layer.parameters():
+            param.requires_grad = True
 
     # def forward(self, x):
     #     x = self.dropout(self.relu(self.layer_1(x)))
@@ -739,6 +764,13 @@ def get_model(args, img_size):
                 len_in *= x
                 global_model = MLP(dim_in=len_in, dim_hidden=64,
                                 dim_out=args.num_classes)
+    
+    elif args.model == 'plain2':
+        len_in = 1
+        for x in img_size:
+            len_in *= x
+        global_model = Plain_LR_2(dim_in=len_in)
+
     elif args.model == 'plain':
         if args.dataset == 'adult':
             # img_size = train_dataset[0][0].shape
@@ -746,7 +778,7 @@ def get_model(args, img_size):
             for x in img_size:
                 len_in *= x
             global_model = Plain_LR_Adult(dim_in=len_in)
-        elif args.dataset == 'compas':
+        elif args.dataset == 'compas' or args.dataset == 'compas-binary':
             # img_size = train_dataset[0][0].shape
             len_in = 1
             for x in img_size:
@@ -758,6 +790,8 @@ def get_model(args, img_size):
             for x in img_size:
                 len_in *= x
             global_model = Plain_LR_Adult(dim_in=len_in)
+        
+
     else:
         exit('Error: unrecognized model')
 

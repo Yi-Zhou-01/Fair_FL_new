@@ -13,9 +13,12 @@ import sys
 import time
 import copy
 
+
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
+from FairBatchSampler import FairBatch, CustomDataset
+
 
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -237,10 +240,10 @@ class LocalUpdate(object):
         self.device = 'cuda' if args.gpu else 'cpu'
         # Default criterion set to NLL loss function
         # self.criterion = nn.NLLLoss().to(self.device)
-        self.criterion = torch.nn.BCEWithLogitsLoss().to(self.device)
+        # self.criterion = torch.nn.BCEWithLogitsLoss().to(self.device)
+        self.criterion = torch.nn.BCELoss().to(self.device)
         self.dataset = dataset
-    
-   
+
     def split_w_idxs(self, dataset, idxs, batch_size, dataset_name=""):
         train_idxs, test_idxs, val_idxs = idxs
 
@@ -281,6 +284,9 @@ class LocalUpdate(object):
 
         optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.ft_lr,
                                         momentum=0.9, weight_decay=5e-4)
+        
+        # criterion = torch.nn.BCEWithLogitsLoss().to(self.device)
+        criterion = torch.nn.BCELoss().to(self.device)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5, last_epoch=-1)
         # if self.args.optimizer == 'sgd':
         #     optimizer = torch.optim.SGD(model.final_layer.parameters(), lr=self.args.lr,
@@ -300,13 +306,22 @@ class LocalUpdate(object):
                 images, labels, a = images.to(self.device), labels.to(self.device), a.to(self.device)
                 optimizer.zero_grad()  
 
-                outputs = model.final_layer(model.get_features(images)).squeeze()
+                outputs = model(images).squeeze()
+                # outputs = outputs.reshape(-1)
+
+                # outputs = model.final_layer(model.get_features(images)).squeeze()
                 # pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs]).view(-1)
-                pred_labels =  (outputs > 0.5).to(torch.float32).view(-1)
+                # pred_labels =  (outputs > 0.5).to(torch.float32).view(-1)
+                # if self.args.model == "plain":
+                #     pred_labels = torch.max(outputs.data, 1)
+                # else:
+
+                loss_1 = criterion(outputs, labels)
+               
+                pred_labels = (outputs > 0.5).to(torch.float32)
                 # print("pred_labels: ", type(pred_labels))
                 eod_loss = utils.equalized_odds_diff(pred_labels, labels, a)
                 # print("eod_loss: ", type(eod_loss))
-                loss_1 = self.criterion(outputs, labels)
 
                 loss = loss_1*self.args.ft_alpha2 + self.args.ft_alpha * eod_loss
                 # print("loss: ", type(loss))
@@ -315,13 +330,6 @@ class LocalUpdate(object):
                 loss.backward(retain_graph=True)
                 optimizer.step()
 
-                # if self.args.verbose and (batch_idx % 10 == 0):
-                #     if batch_idx % 50 == 0 and (iter<10 or iter%10 ==0):
-                #     # if self.args.local_ep <= 10 or (self.args.local_ep <=100 and self.args.local_ep % 10 == 0) or (self.args.local_ep % 50 == 0):
-                #         print('| Global Round : {} | Local Epoch : {} | [{}/{} ({:.0f}%)]  \tLoss: {:.6f} L1|EOD:  {:.6f} | {:.6f}'.format(
-                #             global_round, iter, batch_idx * len(images),
-                #             len(self.trainloader.dataset),
-                #             100. * batch_idx / len(self.trainloader), loss.item(), loss_1.item(), eod_loss.item()))
                 self.logger.add_scalar('loss', loss.item())
                 
                 # print('** Loss: {:.6f}  L1 - EOD:  {:.6f} | {:.6f}'.format(loss.item(), loss_1.item(), eod_loss.item()))
@@ -357,7 +365,7 @@ class LocalUpdate(object):
         # Set optimizer for the local updates
         if self.args.optimizer == 'sgd':
             optimizer = torch.optim.SGD(model.parameters(), lr=self.args.lr,
-                                        momentum=0.5)
+                                        momentum=0.5, weight_decay=1e-4)
         elif self.args.optimizer == 'adam':
             optimizer = torch.optim.Adam(model.parameters(), lr=self.args.lr,
                                         weight_decay=1e-4)
@@ -376,10 +384,22 @@ class LocalUpdate(object):
 
                 model.zero_grad()
                 # log_probs = model(images)
+                # def closure():
 
+                #     log_probs = model(images).squeeze()
+                #     log_probs = log_probs.reshape(-1)
+                #     loss = self.criterion(log_probs, labels)
+                #     optimizer.zero_grad()
+                #     # loss = self.criterion(log_probs, labels.long())
+                #     loss.backward()
+                #     return loss
+                
+                # loss = closure()
+                # optimizer.step(closure)
                 log_probs = model(images).squeeze()
                 log_probs = log_probs.reshape(-1)
                 loss = self.criterion(log_probs, labels)
+                # optimizer.zero_grad()
                 # loss = self.criterion(log_probs, labels.long())
                 loss.backward()
                 optimizer.step()
@@ -429,7 +449,7 @@ class LocalUpdate(object):
 
             # Prediction
             # _, pred_labels = torch.max(outputs, 1)
-            pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+            pred_labels = torch.tensor([ int(pred >= self.args.threshold) for pred in outputs])
             pred_labels = pred_labels.view(-1)
             correct += torch.sum(torch.eq(pred_labels, labels)).item()
             total += len(labels)
@@ -470,7 +490,15 @@ class LocalUpdate(object):
             loss += batch_loss.item()
 
             # pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
-            pred_labels = (outputs > 0.5).to(torch.float32)
+            
+            # if self.args.model == "plain":
+            #     # print(outputs.shape)
+            #     print("outputs: ", outputs)
+            #     pred_labels = torch.max(outputs.data)
+            #     print("pred_labels: ", pred_labels)
+            # else:
+            # pred_labels = (outputs > 0.5).to(torch.float32)
+            pred_labels = (outputs > self.args.threshold).to(torch.float32)
             pred_labels = pred_labels.view(-1)
             correct += torch.sum(torch.eq(pred_labels, labels)).item()
             total += len(labels)
@@ -510,10 +538,14 @@ class LocalUpdate(object):
         if "eod" in fairness_metric:
             local_fairness["eod"] = (cm_pred_train.equalized_odds_difference())
             # local_fairness["eod"] = (cm_pred_train.average_abs_odds_difference())
-        if "tpr" in fairness_metric:
+        if True:
             local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
-        if "fpr" in fairness_metric:
             local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
+
+        # if "tpr" in fairness_metric:
+        #     local_fairness["tpr"] = (cm_pred_train.true_positive_rate_difference())
+        # if "fpr" in fairness_metric:
+        #     local_fairness["fpr"] = (cm_pred_train.false_positive_rate_difference())
 
 
 
@@ -545,7 +577,7 @@ def test_inference(args, model, test_dataset):
 
         # Prediction
         # _, pred_labels = torch.max(outputs, 1)
-        pred_labels = torch.tensor([ int(pred >= 0.5) for pred in outputs])
+        pred_labels = torch.tensor([ int(pred >= args.threshold) for pred in outputs])
         # pred_labels = outputs
         pred_labels = pred_labels.view(-1)
         correct += torch.sum(torch.eq(pred_labels, labels)).item()

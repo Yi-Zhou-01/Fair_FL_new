@@ -118,7 +118,13 @@ def args_parser():
     parser.add_argument('--save_avg_model', type=str, default=None, help='Example folder for collecting results')
 
     parser.add_argument('--use_saved_model', type=str, default="", help='Example folder for collecting results')
-    
+
+    parser.add_argument('--fair_rep', type=bool, default=None, help='Example folder for collecting results')
+
+    parser.add_argument('--lbd', type=float, default=1.0, help='Parameter for fair representation')
+
+    parser.add_argument('--threshold', type=float, default=0.5, help='The classification threshold, default=0.5')
+
     args = parser.parse_args()
     return args
 

@@ -18,6 +18,7 @@ import cv2
 from torchvision import transforms
 from PIL import Image
 import sys
+import fair_var
 
 class AdultDataset(Dataset):
     """Students Performance dataset."""
@@ -31,20 +32,21 @@ class AdultDataset(Dataset):
 
         if X is None:
             if df is not None:
-                df = df
+                self.df = df
             else:
-                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+                self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            
             if crop:
-                df = df[:crop]
+                self.df = self.df[:crop]
 
             if subset:
-                df = df[df.index.isin(subset)]
+                self.df = self.df[self.df.index.isin(subset)]
 
             # self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
-            self.X = df.drop([self.target], axis=1).to_numpy().astype(np.float32)
+            self.X = self.df.drop([self.target], axis=1).to_numpy().astype(np.float32)
             self.X = self.standardlize_X(self.X)
-            self.y = df[self.target].to_numpy().astype(np.float32)
-            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+            self.y = self.df[self.target].to_numpy().astype(np.float32)
+            self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
 
         else:
             self.X = X.to_numpy().astype(np.float32)
@@ -95,29 +97,29 @@ class CompasDataset(Dataset):
         """
 
         self.target = "two_year_recid"
-        self.s_attr = "sex"
+        self.s_attr = "race"
         self.name = "compas"
 
         if X is None:
             if df is not None:
-                df = df
+                self.df = df
             else:
-                df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+                self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
             
             if crop:
-                df = df[:crop]
+                self.df = self.df[:crop]
 
             if subset:
-                df = df[df.index.isin(subset)]
+                self.df = self.df[self.df.index.isin(subset)]
             
 
             # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
 
             # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
-            self.X = df.drop([self.target, self.s_attr], axis=1).to_numpy().astype(np.float32)
+            self.X = self.df.drop([self.target, ], axis=1).to_numpy().astype(np.float32)
             self.X = self.standardlize_X(self.X)
-            self.y = df[self.target].to_numpy().astype(np.float32)
-            self.a = df[self.s_attr].to_numpy().astype(np.float32)
+            self.y = self.df[self.target].to_numpy().astype(np.float32)
+            self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
         
         else:
             self.X = X.to_numpy().astype(np.float32)
@@ -147,15 +149,88 @@ class CompasDataset(Dataset):
         
     
     def standardlize_X(self, X_data):
-        # Define the columns to standardize
-        # columns_to_standardize = [26, 27, 28, 29, 30, 31]
-        columns_to_standardize = list(range(len(self.X[0]))) # standardize all
+        # # Define the columns to standardize
+        columns_to_standardize = [5]
+        # columns_to_standardize = list(range(len(self.X[0]))) # standardize all
         scaler = StandardScaler()
         scaler.fit(X_data[:, columns_to_standardize])
         X_data[:, columns_to_standardize] = scaler.transform(X_data[:, columns_to_standardize])
+        # print(X_data[:10])
+        # print(scaler.mean_)
 
         return X_data
 
+
+class CompasBinaryDataset(Dataset):
+    """Students Performance dataset."""
+
+    def __init__(self, csv_file, X=None, y=None, a=None, df=None, crop=None, subset=None):
+        """Initializes instance of class Compas Dataset.
+        """
+
+        self.target = "two_year_recid"
+        self.s_attr = "race"
+        self.name = "compas-binary"
+
+        if X is None:
+            if df is not None:
+                self.df = df
+            else:
+                self.df = pd.read_csv(csv_file, index_col=False) #.drop("Unnamed: 0", axis=1)
+            
+            if crop:
+                self.df = self.df[:crop]
+
+            if subset:
+                self.df = self.df[self.df.index.isin(subset)]
+            
+
+            # self.bld = BinaryLabelDataset(df=self.df, label_names=[self.target], protected_attribute_names=[self.s_attr])
+
+            # self.X = self.df.drop(self.target, axis=1).to_numpy().astype(np.float32)
+            self.X = self.df.drop([self.target, ], axis=1).to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = self.df[self.target].to_numpy().astype(np.float32)
+            self.a = self.df[self.s_attr].to_numpy().astype(np.float32)
+        
+        else:
+            self.X = X.to_numpy().astype(np.float32)
+            self.X = self.standardlize_X(self.X)
+            self.y = y.to_numpy().astype(np.float32).flatten()
+            self.a = a.to_numpy().astype(np.float32).flatten()
+
+
+        # new_df = pd.DataFrame()
+        # new_df["y"] = self.y
+        # new_df["a"] = self.a
+        # self.bld =  BinaryLabelDataset(df=new_df, label_names=["y"], protected_attribute_names=["a"])
+
+        self.size = len(self.y)
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx, s_att=True):
+        if isinstance(idx, torch.Tensor):
+            idx = idx.tolist()
+        # return [self.X.iloc[idx].values, self.y[idx]]
+        if s_att:
+            return [self.X[idx], self.y[idx], self.a[idx]]
+        else:
+            return [self.X[idx], self.y[idx]]
+        
+    
+    def standardlize_X(self, X_data):
+        # # Define the columns to standardize
+        columns_to_standardize = [5]
+        # columns_to_standardize = list(range(len(self.X[0]))) # standardize all
+        scaler = StandardScaler()
+        scaler.fit(X_data[:, columns_to_standardize])
+        X_data[:, columns_to_standardize] = scaler.transform(X_data[:, columns_to_standardize])
+        # print(X_data[:10])
+        # print(scaler.mean_)
+
+        return X_data
 
 
 class WCLDDataset(Dataset):
@@ -617,6 +692,54 @@ class NIHEffDataset(Dataset):
             return [img, self.y[idx]]
 
 
+def fair_rep_dataset(dataset, local_set_ls, lbd):
+    dataset_df = dataset.df
+    
+    new_df_ls = []
+    
+    for i in range(len(local_set_ls)):
+        dataset_df_train = dataset_df[dataset_df.index.isin(local_set_ls[i].train_set_idxs)]
+        dataset_df_test = dataset_df[dataset_df.index.isin(local_set_ls[i].test_set_idxs)]
+    
+        feature_list = list(dataset_df.columns)
+        feature_list.remove(dataset.target)
+
+        protect_list = [dataset.s_attr]
+        outcome = dataset.target
+
+        df_train_tmp = pd.DataFrame()
+        df_test_tmp = pd.DataFrame()
+        for col in feature_list:
+            if col == dataset.s_attr: continue
+            df_train_tmp[col] = fair_var.gen_latent_nonparam_regula(dataset_df_train[feature_list], protect_list, col, lbd)
+            df_test_tmp[col] = fair_var.gen_latent_nonparam_regula(dataset_df_test[feature_list], protect_list, col, lbd)
+    
+        for column in protect_list:
+            df_train_tmp[column] = dataset_df_train[column].values
+            df_test_tmp[column] = dataset_df_test[column].values
+            
+        df_train_tmp[outcome] = dataset_df_train[outcome].values
+        df_test_tmp[outcome] = dataset_df_test[outcome].values
+        
+        df_train_tmp.index = dataset_df_train.index
+        df_test_tmp.index = dataset_df_test.index
+        
+        print(df_train_tmp[:5])
+        new_df_ls.append(df_train_tmp)
+        new_df_ls.append(df_test_tmp)
+    
+    converted_df = pd.concat(new_df_ls, sort=False).sort_index()
+#     return pd.concat(new_df_ls)
+
+    if dataset.name == "adult":
+        fair_dataset = AdultDataset(csv_file="", df=converted_df)
+    elif dataset.name == "compas-binary":
+        fair_dataset = CompasBinaryDataset(csv_file="", df=converted_df)
+    elif dataset.name == "compas":
+        fair_dataset = CompasDataset(csv_file="", df=converted_df)
+
+    return fair_dataset
+
 
 
 def get_bld_dataset_w_pred(a, pred_labels):
@@ -709,11 +832,22 @@ def get_dataset(args):
         partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()
     
+    
     elif args.dataset == 'compas':
 
-        csv_file_train =data_path+'/compas/compas_encoded_all.csv'
+        csv_file_train =data_path+'/compas/compas_encoded_all_new_encoded.csv'
 
         train_dataset = CompasDataset(csv_file_train)
+        test_dataset = train_dataset # Dummy test dataset: Not used for testing
+        partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
+        user_groups =  np.load(partition_file, allow_pickle=True).item()
+    
+    elif args.dataset == 'compas-binary':
+
+        # csv_file_train =data_path+'/compas/compas_encoded_all_new_encoded.csv'
+        csv_file_train =data_path+'/compas-binary/compas_encoded_all_new_encoded_binary.csv'
+
+        train_dataset = CompasBinaryDataset(csv_file_train)
         test_dataset = train_dataset # Dummy test dataset: Not used for testing
         partition_file = get_partition(args.platform, args.partition_idx, dataset=args.dataset)
         user_groups =  np.load(partition_file, allow_pickle=True).item()

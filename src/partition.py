@@ -105,6 +105,10 @@ if __name__ == '__main__':
         csv_file_train = os.getcwd()+"/data/compas/compas_encoded_all.csv"
         target_attr = "two_year_recid"
         train_data = CompasDataset(csv_file_train)
+    elif args.dataset == "compas-binary":
+        csv_file_train = os.getcwd()+"/data/compas-binary/compas_encoded_all_new_encoded_binary.csv"
+        target_attr = "two_year_recid"
+        train_data = dataset.CompasBinaryDataset(csv_file_train)
     elif args.dataset == "wcld":
         csv_file_train = os.getcwd()+"/data/wcld/wcld_60000.csv"
         train_data = WCLDDataset(csv_file_train)

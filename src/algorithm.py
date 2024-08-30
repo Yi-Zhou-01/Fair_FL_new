@@ -397,10 +397,16 @@ def fairfed_train(args, global_model, local_set_ls, train_dataset, stat_dic, use
         if fair_rep:
             stat_dic["test_acc_fairfed_rep"][c] = acc
             stat_dic["test_eod_fairfed_rep"][c] = local_fairness["eod"]
+            if args.plot_tpfp:
+                    stat_dic["test_tpr_fairfed_rep"][c] = local_fairness["tpr"]
+                    stat_dic["test_fpr_fairfed_rep"][c] = local_fairness["fpr"]
         else:    
             print("check eod fairfed: ", local_fairness["eod"] )
             stat_dic["test_acc_fairfed"][c] = acc
             stat_dic["test_eod_fairfed"][c] = local_fairness["eod"]
+            if args.plot_tpfp:
+                    stat_dic["test_tpr_fairfed"][c] = local_fairness["tpr"]
+                    stat_dic["test_fpr_fairfed"][c] = local_fairness["fpr"]
     
     print("+++ global_fairness +++")
     print(global_fairness_ls)

@@ -80,9 +80,9 @@ def main():
         all_fl = all_fl + "new"
     if args.fl_fairfed:
         all_fl = all_fl + "fairfed"    
-    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}_{}'.\
+    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}_fta_{}{}_{}'.\
         format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
-               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs, args.rep)    # <------------- iid tobeadded
+               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs, args.ft_alpha,args.ft_alpha2, args.rep)    # <------------- iid tobeadded
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
@@ -187,6 +187,8 @@ def main():
     if args.fl_fairfed:
         stat_keys += [ss+"_"+lm+"_"+"fairfed" for ss in set_split for lm in local_metrics]
         stat_keys += [ss+"_"+lm+"_"+"fairfed_rep" for ss in set_split for lm in local_metrics]
+        stat_keys += [ss+"_"+lm+"_"+"fairfed" for ss in set_split for lm in  ["tpr", "fpr"]]
+        stat_keys += [ss+"_"+lm+"_"+"fairfed_rep" for ss in set_split for lm in  ["tpr", "fpr"]]
 
     # stat_keys = ['train_acc_before','train_acc_after', 'test_acc_before', 'test_acc_after',
     #                 'train_eod_before', 'train_eod_after', 'test_eod_before', 'test_eod_after',
@@ -201,6 +203,7 @@ def main():
     local_loss_all = []
 
     print("time: ", int(time.time() - start_time), int(time.time()))
+    time_point_1 = time.time()
     if args.fl_new and ( args.use_saved_model == ""):
         print("********* Start FedAvg/New Training **********")
 
@@ -226,6 +229,7 @@ def main():
 
         
         print("time: ", int(time.time() - start_time), int(time.time()))
+        time_point_2 =  time.time()
         # Post-processing approach
         if "pp" in args.debias:
             # Apply post-processing locally at each client:
@@ -235,6 +239,7 @@ def main():
 
             stat_dic, pred_train_dic, pred_test_dic = algorithm.post_processing(args, stat_dic, pred_train_dic, pred_test_dic, fair_rep=False)
            
+            time_point_3 =  time.time()
             if args.fair_rep:
                 pred_train_dic_rep['pred_labels_pp'] = []
                 pred_test_dic_rep['pred_labels_pp'] = []
@@ -329,15 +334,18 @@ def main():
                        'train_acc_new_ft','train_eod_new_ft','train_tpr_new_ft', 'train_fpr_new_ft']
         for k in ft_keys:
             stat_dic[k] = np.zeros(args.num_users) 
+        
+        time_point_4 =  time.time()
 
         if ("ft" in args.debias) and  (args.ft_ep != 0):
             
             print("******** Final layer fine-tuning ******** ")
             
             stat_dic = algorithm.fine_tuning(args, global_model, local_set_ls, train_dataset, stat_dic, user_groups, logger, statistics_dir, fair_rep=False)
+        time_point_5 =  time.time()
 
-                    
-
+       
+    
         # print("stats dic: ")
         # print(stat_dic)
     
@@ -360,7 +368,17 @@ def main():
             global_model_rep=models.get_model(args, img_size=img_size)
             global_model_rep, stat_dic = algorithm.fairfed_train(args, global_model_rep, local_set_ls, train_dataset_rep, stat_dic, user_groups, logger, statistics_dir, fair_rep=True)
          
+    time_point_6=time.time()
 
+    with open(statistics_dir +"/time.txt", "a") as w_file:
+        w_file.write("******** FedAvg ********\n")
+        w_file.write(str(time_point_2-time_point_1) + "\n")
+        w_file.write("******** FedAvg + PP ********\n")
+        w_file.write(str(time_point_3-time_point_1) + "\n")           
+        w_file.write("******** FedAvg + FT ********\n")
+        w_file.write(str((time_point_2-time_point_1) + (time_point_5-time_point_4)) + "\n")    
+        w_file.write("******** FairFed ********\n")
+        w_file.write(str(time_point_6-time_point_5) + "\n")        
 
     print("time: ", int(time.time() - start_time), int(time.time()))
     print("Start saving...")

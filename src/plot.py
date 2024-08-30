@@ -237,13 +237,18 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, plot_fed=True, plot
     ax1.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
     if plot_fed:
         ax1.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
+    if args.fair_rep:
+        ax1.plot(x, stat_dic['test_eod_fedavg_rep'],  color="cornflowerblue",  marker='o',linestyle='dashed', label='eod_fedavg_rep')
+        ax1.plot(x, stat_dic['test_eod_fairfed_rep'],  color="limegreen",  marker='o',linestyle='dashed', label='eod_fairfed_rep')
+        ax1.plot(x, stat_dic['test_eod_new_rep'],  color="orange", marker='o', linestyle='dashed', label='eod_new_rep')
+    
     # ax1.set_ylim(y_lim)
     
 
     ax1.set_xlabel("Client ID")
     ax1.set_xticks(np.arange(min(x), max(x)+1, 1.0))
     ax1.set_title('EOD - Test')
-    ax1.legend(loc="upper right")
+    ax1.legend(loc="upper right",fontsize=6)
 
 
     # ax2.axhline(0.1, color='orange', alpha=0.4)
@@ -252,13 +257,18 @@ def plot_multi_exp(stat_dic, args, new=True, plot_tpfp=True, plot_fed=True, plot
         ax2.plot(x, stat_dic['test_acc_fairfed'], color='green', marker='o', label='acc_fairfed')
     ax2.plot(x, stat_dic['test_acc_new'],  color="red", marker='o', label='acc_new')
     ax2.plot(x, stat_dic['test_acc_fedavg'], color='blue', marker='o',  label='acc_fedavg')
+    if args.fair_rep:
+        ax2.plot(x, stat_dic['test_acc_fedavg_rep'],  color="cornflowerblue",  marker='o', label='acc_fedavg_rep')
+        ax2.plot(x, stat_dic['test_acc_fairfed_rep'],  color="limegreen",  marker='o', label='acc_fairfed_rep')
+        ax2.plot(x, stat_dic['test_acc_new_rep'],  color="orange", marker='o', label='acc_new_rep')
     # ax2.plot(x, stat_dic['test_eod_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='eod_new_ft')
 
     # ax2.plot(x, stat_dic['test_eod_new'],  color="red", marker='o', linestyle='dashed', label='eod_new')
     # ax2.plot(x, stat_dic['test_eod_fedavg'], color='blue', marker='o', linestyle='dashed', label='eod_fedavg')
     # ax2.plot(x, stat_dic['test_eod_fairfed'],  color="green",  marker='o',linestyle='dashed', label='eod_fairfed')
 
-    if( not (args.dataset== "adult" or args.dataset== "compas")) and plot_ft:
+    # if( not (args.dataset== "adult" or args.dataset== "compas")) and plot_ft:
+    if plot_ft:
         ax2.plot(x, stat_dic['test_acc_new_ft'], color='hotpink', marker='o',  label='acc_new_ft')
         ax1.plot(x, stat_dic['test_eod_new_ft'], color='hotpink', marker='o', linestyle='dashed', label='eod_new_ft')
 
