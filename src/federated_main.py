@@ -79,9 +79,9 @@ def main():
         all_fl = all_fl + "new"
     if args.fl_fairfed:
         all_fl = all_fl + "fairfed"    
-    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_ftbs{}_{}'.\
+    statistics_dir = save_to_root+'/statistics/{}/{}_{}_{}_{}_frac{}_client{}_lr{}_ftlr{}_part{}_beta{}_ep{}_{}_{}_ftep_{}_bs{}_ftbs{}_fta_{}{}_{}'.\
         format(args.idx, all_fl, args.debias, args.dataset, args.model, args.frac, args.num_users,
-               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.ft_bs, args.rep)    # <------------- iid tobeadded
+               args.lr, args.ft_lr, args.partition_idx, args.beta, args.epochs, args.local_ep, args.fairfed_ep, args.ft_ep, args.local_bs, args.ft_bs,args.ft_alpha,args.ft_alpha2, args.rep)    # <------------- iid tobeadded
         # Save to files ...
         # TBA
     os.makedirs(statistics_dir, exist_ok=True)
@@ -131,7 +131,9 @@ def main():
             local_set_ls = pickle.load(inp)
             print("Using saved local train/test split in: ", args.local_split)
 
-    
+    if args.fair_rep:
+        train_dataset_rep = dataset.fair_rep_dataset(train_dataset, local_set_ls, args.lbd)
+        train_dataset = train_dataset_rep
     
     # BUILD MODEL
     print("args.use_saved_model: ", args.use_saved_model)

@@ -256,7 +256,8 @@ class ResNetPTB(nn.Module):
         x = x.view(x.size(0), -1)
 
         # Fully conected layer
-        x = self.final_layer(x)
+        # x = self.final_layer(x)
+        x = sigmoid(self.final_layer(x))
         return x
     
     
@@ -467,7 +468,8 @@ class MobileNet(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        x = (self.final_layer(x))
+        # x = (self.final_layer(x))
+        x = sigmoid(self.final_layer(x))
 
         return x
 

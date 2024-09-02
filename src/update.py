@@ -17,7 +17,6 @@ import copy
 from aif360.metrics import BinaryLabelDatasetMetric
 from aif360.metrics import ClassificationMetric
 from aif360.datasets import BinaryLabelDataset
-from FairBatchSampler import FairBatch, CustomDataset
 
 
 from sklearn.model_selection import train_test_split

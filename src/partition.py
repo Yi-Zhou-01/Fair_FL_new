@@ -114,7 +114,7 @@ if __name__ == '__main__':
         train_data = WCLDDataset(csv_file_train)
         target_attr = "recid_180d"
     elif args.dataset == "ptb-xl":
-        csv_file_train = os.getcwd()+"/data/ptb-xl/ptbxl_all_clean_new.csv"
+        csv_file_train = os.getcwd()+"/data/ptb-xl/ptbxl_all_clean_new_2.csv"
         train_data = PTBDataset(csv_file_train, traces=False)
         target_attr = "NORM"
         print("Read from ptb-xl!")
